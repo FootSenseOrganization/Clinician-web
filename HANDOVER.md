@@ -22,8 +22,8 @@ We have successfully completed the **Phase 2 Migration** for the `clinician-web`
 3. **Bug Fixes:** Address any edge cases or UI inconsistencies the user finds during manual testing.
 
 ## Useful Links
-- [Walkthrough (Completed Changes)](file:///C:/Users/Tharaka%20Dilshan/.gemini/antigravity-ide/brain/6adf8940-1faf-4c56-bc5c-5cb538e0d2e0/walkthrough.md)
-- [Task Tracker](file:///C:/Users/Tharaka%20Dilshan/.gemini/antigravity-ide/brain/6adf8940-1faf-4c56-bc5c-5cb538e0d2e0/task.md)
-- [Implementation Plan](file:///C:/Users/Tharaka%20Dilshan/.gemini/antigravity-ide/brain/6adf8940-1faf-4c56-bc5c-5cb538e0d2e0/implementation_plan.md)
+- [Walkthrough (Completed Changes)](./walkthrough.md)
+- [Task Tracker](./task.md)
+- [Implementation Plan](./implementation_plan.md)
 
 *You can continue the work by reading through the above files and following the user's instructions!*
