@@ -1,6 +1,7 @@
 import { Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useMutation } from "@tanstack/react-query";
 import { ClinicianLayout } from "@/components/layout/ClinicianLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { Avatar } from "@/components/RiskBadge";
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/tooltip";
 import { formatDate } from "@/utils/format";
 import { useAuth } from "@/context/AuthContext";
+import * as profileController from "@/controllers/profileController";
 
 const specialties = [
   "Podiatry",
@@ -26,11 +28,35 @@ const inputCls =
   "mt-1.5 w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-sm outline-none transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-ring/30";
 
 export default function ProfilePage() {
-  const { user: profile } = useAuth();
-  const [name, setName] = useState(profile?.name ?? "");
-  const [email, setEmail] = useState(profile?.email ?? "");
+  const { user: profile, updateUser } = useAuth();
+  
+  // Extract first and last name directly
+  const initialFirstName = profile?.first_name ?? "";
+  const initialLastName = profile?.last_name ?? "";
+
+  const [firstName, setFirstName] = useState(initialFirstName);
+  const [lastName, setLastName] = useState(initialLastName);
   const [specialty, setSpecialty] = useState(profile?.specialty ?? "");
   const [institution, setInstitution] = useState(profile?.institution ?? "");
+
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      if (!profile) return;
+      await profileController.updateProfile(profile.id, firstName, lastName, specialty, institution);
+    },
+    onSuccess: () => {
+      updateUser({
+        first_name: firstName,
+        last_name: lastName,
+        specialty,
+        institution,
+      });
+      toast.success("Profile updated successfully.");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to update profile.");
+    },
+  });
 
   useEffect(() => {
     document.title = "My Profile — FootSense";
@@ -44,11 +70,11 @@ export default function ProfilePage() {
 
       <div className="surface-card max-w-3xl p-8">
         <div className="flex items-center gap-4">
-          <Avatar initials={profile.avatar_initials} className="size-16 text-lg" />
+          <Avatar initials={((profile.first_name?.[0] ?? "") + (profile.last_name?.[0] ?? "")).toUpperCase()} className="size-16 text-lg" />
           <div>
-            <p className="text-lg font-semibold">{name}</p>
+            <p className="text-lg font-semibold">{profile.first_name} {profile.last_name}</p>
             <p className="text-sm text-muted-foreground">
-              {specialty} · {institution}
+              {profile.specialty} · {profile.institution}
             </p>
           </div>
         </div>
@@ -57,21 +83,36 @@ export default function ProfilePage() {
           className="mt-8 grid gap-5 sm:grid-cols-2"
           onSubmit={(e) => {
             e.preventDefault();
-            toast.success("Profile updated successfully.");
+            updateMutation.mutate();
           }}
         >
           <div>
-            <label className="text-sm font-medium">Full Name</label>
-            <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} />
+            <label className="text-sm font-medium">First Name</label>
+            <input className={inputCls} value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm font-medium">Last Name</label>
+            <input className={inputCls} value={lastName} onChange={(e) => setLastName(e.target.value)} />
           </div>
           <div>
             <label className="text-sm font-medium">Email</label>
-            <input
-              type="email"
-              className={inputCls}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      readOnly
+                      disabled
+                      value={profile.email}
+                      className="mt-1.5 w-full cursor-not-allowed rounded-lg border border-input bg-muted px-3.5 py-2.5 text-sm text-muted-foreground"
+                    />
+                    <Lock className="absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>Managed by your login provider</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           <div>
             <label className="text-sm font-medium">Specialty</label>
@@ -85,7 +126,7 @@ export default function ProfilePage() {
               ))}
             </select>
           </div>
-          <div>
+          <div className="sm:col-span-2">
             <label className="text-sm font-medium">Institution</label>
             <input
               className={inputCls}
@@ -114,8 +155,12 @@ export default function ProfilePage() {
           </div>
 
           <div className="sm:col-span-2">
-            <button className="rounded-lg brand-gradient px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-transform duration-200 hover:-translate-y-0.5">
-              Save Changes
+            <button 
+              type="submit"
+              disabled={updateMutation.isPending}
+              className="rounded-lg brand-gradient px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-transform duration-200 hover:-translate-y-0.5 disabled:opacity-70 disabled:hover:translate-y-0"
+            >
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </form>

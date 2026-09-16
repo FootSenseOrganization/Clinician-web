@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { CheckCircle2, Clock, SearchX } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, SearchX } from "lucide-react";
 import { useEffect, useState } from "react";
 import { formatDate } from "@/utils/format";
 import * as authController from "@/controllers/authController";
@@ -17,8 +17,12 @@ export default function RegisterStatusPage() {
   return (
     <div className="min-h-screen hero-gradient px-4 py-12">
       <div className="mx-auto w-full max-w-xl">
-        <Link to="/register" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-          ← Back to application
+        <Link
+          to="/"
+          className="group mb-4 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground"
+        >
+          <ArrowLeft className="size-4 transition-transform duration-200 group-hover:-translate-x-1" />
+          <span>Back to FootSense</span>
         </Link>
         <div className="surface-card mt-4 p-8 shadow-elevated">
           <h1 className="text-2xl font-bold tracking-tight">Check Application Status</h1>
@@ -68,6 +72,16 @@ export default function RegisterStatusPage() {
                   >
                     Sign In
                   </button>
+                </div>
+              )}
+              {result.found && result.status === "declined" && (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-5">
+                  <p className="flex items-center gap-2 font-semibold text-destructive">
+                    Application Declined
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {result.reason || "Your application was not approved. Please contact support or check your registration details."}
+                  </p>
                 </div>
               )}
               {!result.found && (

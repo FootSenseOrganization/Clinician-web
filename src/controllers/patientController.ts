@@ -8,12 +8,13 @@ export async function getPatientList(
   search: string,
   riskFilter: "all" | RiskLevel,
   sortBy: "scan" | "name" | "score",
+  clinicianId?: string,
 ): Promise<Patient[]> {
-  return patientService.getFilteredPatients(search, riskFilter, sortBy);
+  return patientService.getFilteredPatients(search, riskFilter, sortBy, clinicianId);
 }
 
-export async function getAllPatients(): Promise<Patient[]> {
-  return patientService.getAllPatients();
+export async function getAllPatients(clinicianId?: string): Promise<Patient[]> {
+  return patientService.getAllPatients(clinicianId);
 }
 
 export async function getPatientDetail(id: string): Promise<Patient | null> {

@@ -51,10 +51,6 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   });
   const stats = data?.stats ?? { pendingApplications: 0, activeClinicians: 0, suspendedClinicians: 0, totalPatients: 0 };
 
-  useEffect(() => {
-    if (!loading && role !== "admin") navigate("/admin");
-  }, [loading, role, navigate]);
-
   if (loading || role !== "admin") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -87,9 +83,9 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         </nav>
 
         <button
-          onClick={() => {
-            logout();
-            navigate("/admin");
+          onClick={async () => {
+            await logout();
+            navigate("/login", { replace: true });
           }}
           className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/75 transition-colors duration-200 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
         >

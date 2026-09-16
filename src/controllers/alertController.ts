@@ -1,12 +1,12 @@
 import * as alertService from "@/services/alertService";
 import type { Alert } from "@/types";
 
-export async function getAllAlerts(): Promise<Alert[]> {
-  return alertService.getSortedAlerts();
+export async function getAllAlerts(clinicianId?: string): Promise<Alert[]> {
+  return alertService.getSortedAlerts(clinicianId);
 }
 
-export async function getUnreadAlerts(): Promise<Alert[]> {
-  return alertService.getUnreadAlerts();
+export async function getUnreadAlerts(clinicianId?: string): Promise<Alert[]> {
+  return alertService.getUnreadAlerts(clinicianId);
 }
 
 export async function getUnreadCount(): Promise<number> {

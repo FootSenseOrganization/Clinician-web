@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { AHPRA_REGEX } from "@/controllers/authController";
-import { validateRegistrationForm, type RegistrationFormErrors } from "@/controllers/registrationController";
+import { useMutation } from "@tanstack/react-query";
+import { validateRegistrationForm, submitApplication, type RegistrationFormErrors } from "@/controllers/registrationController";
 
 const specialties = [
   "Podiatry",
@@ -19,12 +20,29 @@ const inputCls =
 export default function RegisterPage() {
   const [form, setForm] = useState({
     ahpra: "",
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     specialty: "Podiatry",
     institution: "",
   });
   const [errors, setErrors] = useState<RegistrationFormErrors>({});
+
+  const submitMutation = useMutation({
+    mutationFn: async () => {
+      await submitApplication(form.ahpra, form.firstName, form.lastName, form.email, form.specialty, form.institution);
+    },
+    onSuccess: () => {
+      toast.success("Application submitted successfully!", {
+        description: "Your application is under review. You can check your status anytime.",
+      });
+      setForm({ ahpra: "", firstName: "", lastName: "", email: "", specialty: "Podiatry", institution: "" });
+      setErrors({});
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to submit application.");
+    },
+  });
 
   useEffect(() => {
     document.title = "Apply for Clinician Access — FootSense";
@@ -35,18 +53,19 @@ export default function RegisterPage() {
     const next = validateRegistrationForm(form);
     setErrors(next);
     if (Object.keys(next).length > 0) return;
-
-    toast.success("Application submitted successfully!", {
-      description: "Your application is under review. You can check your status anytime.",
-    });
-    setForm({ ahpra: "", name: "", email: "", specialty: "Podiatry", institution: "" });
+    
+    submitMutation.mutate();
   }
 
   return (
     <div className="min-h-screen hero-gradient px-4 py-12">
       <div className="mx-auto w-full max-w-2xl">
-        <Link to="/" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-          ← Back to home
+        <Link
+          to="/"
+          className="group mb-4 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:text-foreground"
+        >
+          <ArrowLeft className="size-4 transition-transform duration-200 group-hover:-translate-x-1" />
+          <span>Back to FootSense</span>
         </Link>
         <div className="surface-card mt-4 p-8 shadow-elevated">
           <h1 className="text-2xl font-bold tracking-tight">Apply for Clinician Access</h1>
@@ -71,15 +90,27 @@ export default function RegisterPage() {
               {errors.ahpra && <p className="mt-1 text-xs text-destructive">{errors.ahpra}</p>}
             </div>
 
-            <div>
-              <label className="text-sm font-medium text-foreground">Full Name</label>
-              <input
-                className={inputCls}
-                placeholder="Dr. First Last"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
-              {errors.name && <p className="mt-1 text-xs text-destructive">{errors.name}</p>}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="text-sm font-medium text-foreground">First Name</label>
+                <input
+                  className={inputCls}
+                  placeholder="First"
+                  value={form.firstName}
+                  onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                />
+                {errors.firstName && <p className="mt-1 text-xs text-destructive">{errors.firstName}</p>}
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground">Last Name</label>
+                <input
+                  className={inputCls}
+                  placeholder="Last"
+                  value={form.lastName}
+                  onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                />
+                {errors.lastName && <p className="mt-1 text-xs text-destructive">{errors.lastName}</p>}
+              </div>
             </div>
 
             <div>
@@ -124,9 +155,10 @@ export default function RegisterPage() {
 
             <button
               type="submit"
-              className="w-full rounded-lg brand-gradient px-4 py-3 text-sm font-semibold text-primary-foreground shadow-card transition-transform duration-200 hover:-translate-y-0.5"
+              disabled={submitMutation.isPending}
+              className="w-full rounded-lg brand-gradient px-4 py-3 text-sm font-semibold text-primary-foreground shadow-card transition-transform duration-200 hover:-translate-y-0.5 disabled:opacity-70 disabled:hover:translate-y-0"
             >
-              Submit Application
+              {submitMutation.isPending ? "Submitting..." : "Submit Application"}
             </button>
           </form>
 

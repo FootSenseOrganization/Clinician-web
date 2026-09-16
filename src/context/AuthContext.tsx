@@ -1,148 +1,261 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { queryClient } from "@/lib/queryClient";
 import type { Clinician, UserRole } from "@/types";
 
 interface AuthState {
   role: UserRole;
   user: Clinician | null;
   loading: boolean;
-  loginWithEmail: (email: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
+  isAuthenticated: boolean;
+  authEmail: string | null;
+  signInWithGoogle: (redirectPath?: string) => Promise<void>;
+  logout: () => Promise<void>;
+  updateUser: (updatedFields: Partial<Clinician>) => void;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
-const ROLE_KEY = "footsense.role";
-const EMAIL_KEY = "footsense.email";
+const ADMIN_EMAIL = "foot.sense.monash@gmail.com";
+const SESSION_CACHE_KEY = "footsense_session_cache";
+
+interface CachedSession {
+  role: UserRole;
+  user: Clinician | null;
+  authEmail: string | null;
+}
+
+function getCachedSession(): CachedSession | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_CACHE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return null;
+}
+
+function setCachedSession(data: CachedSession | null) {
+  try {
+    if (data) {
+      sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify(data));
+    } else {
+      sessionStorage.removeItem(SESSION_CACHE_KEY);
+    }
+  } catch {}
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<UserRole>(null);
-  const [user, setUser] = useState<Clinician | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Initialize synchronously from session cache to provide 0ms instant dashboard loads on refresh
+  const initialCache = useMemo(() => getCachedSession(), []);
 
-  // Restore session from localStorage
-  useEffect(() => {
-    const storedRole = window.localStorage.getItem(ROLE_KEY) as UserRole;
-    const storedEmail = window.localStorage.getItem(EMAIL_KEY);
-    if (storedRole && storedEmail) {
-      restoreUser(storedEmail, storedRole).finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
-  }, []);
+  const [role, setRole] = useState<UserRole>(initialCache?.role ?? null);
+  const [user, setUser] = useState<Clinician | null>(initialCache?.user ?? null);
+  const [loading, setLoading] = useState(!initialCache);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!initialCache?.user);
+  const [authEmail, setAuthEmail] = useState<string | null>(initialCache?.authEmail ?? null);
 
-  async function restoreUser(email: string, savedRole: UserRole) {
+  async function resolveUser(email: string, retryOnFailure = true): Promise<boolean> {
+    const trimmed = email.trim().toLowerCase();
+
+    // 1. Primary: Call dedicated self-healing RPC function
     try {
-      if (savedRole === "clinician") {
-        const { data } = await supabase
-          .from("clinician_summary")
-          .select("*")
-          .eq("email", email)
-          .maybeSingle();
-        if (data) {
-          setRole("clinician");
-          setUser(data as Clinician);
-          return;
-        }
-      } else if (savedRole === "admin") {
-        const { data } = await supabase
-          .from("users_profile")
-          .select("id, email, first_name, last_name, role")
-          .eq("email", email)
-          .eq("role", "admin")
-          .maybeSingle();
-        if (data) {
-          setRole("admin");
-          setUser({
-            id: data.id,
-            name: `${data.first_name} ${data.last_name}`.trim() || "Admin",
-            email: data.email,
+      const { data, error } = await supabase.rpc("get_current_user_profile");
+      if (!error && data && data.role && data.user) {
+        const resolvedRole = data.role as UserRole;
+        const resolvedUser = data.user as Clinician;
+        setRole(resolvedRole);
+        setUser(resolvedUser);
+        setCachedSession({ role: resolvedRole, user: resolvedUser, authEmail: trimmed });
+        return true;
+      }
+    } catch {
+      // Fallback if migration 038 RPC is not yet applied
+    }
+
+    // 2. Client-side fallback: Query clinician_summary with case-insensitive ilike
+    try {
+      const { data: clinician } = await supabase
+        .from("clinician_summary")
+        .select("*")
+        .ilike("email", trimmed)
+        .maybeSingle();
+
+      if (clinician) {
+        setRole("clinician");
+        setUser(clinician as Clinician);
+        setCachedSession({ role: "clinician", user: clinician as Clinician, authEmail: trimmed });
+        return true;
+      }
+    } catch {
+      // Fallback to direct table query
+    }
+
+    // 3. Client-side fallback: Query users_profile with case-insensitive ilike
+    try {
+      const { data: profile } = await supabase
+        .from("users_profile")
+        .select("id, email, first_name, last_name, role")
+        .ilike("email", trimmed)
+        .maybeSingle();
+
+      if (profile) {
+        if (profile.role === "admin") {
+          const adminUser: Clinician = {
+            id: profile.id,
+            first_name: profile.first_name || "Admin",
+            last_name: profile.last_name || "",
+            email: profile.email,
             specialty: "Administration",
             institution: "FootSense",
             ahpra_number: "",
-            avatar_initials: (data.first_name?.[0] ?? "A") + (data.last_name?.[0] ?? ""),
             status: "active",
             last_login: new Date().toISOString(),
             created_at: "",
             patient_count: 0,
-          });
-          return;
+          };
+          setRole("admin");
+          setUser(adminUser);
+          setCachedSession({ role: "admin", user: adminUser, authEmail: trimmed });
+          return true;
+        }
+
+        if (profile.role === "clinician") {
+          const clinicianUser: Clinician = {
+            id: profile.id,
+            first_name: profile.first_name || "Clinician",
+            last_name: profile.last_name || "",
+            email: profile.email,
+            specialty: "Podiatry",
+            institution: "FootSense Clinical Health",
+            ahpra_number: "",
+            status: "active",
+            last_login: new Date().toISOString(),
+            created_at: "",
+            patient_count: 0,
+          };
+          setRole("clinician");
+          setUser(clinicianUser);
+          setCachedSession({ role: "clinician", user: clinicianUser, authEmail: trimmed });
+          return true;
         }
       }
-      // Stored session invalid — clear it
-      window.localStorage.removeItem(ROLE_KEY);
-      window.localStorage.removeItem(EMAIL_KEY);
-    } catch {
-      window.localStorage.removeItem(ROLE_KEY);
-      window.localStorage.removeItem(EMAIL_KEY);
+    } catch {}
+
+    // 4. Hardcoded Admin Email Fallback
+    if (trimmed === ADMIN_EMAIL.toLowerCase()) {
+      const fallbackAdmin: Clinician = {
+        id: "admin-fallback",
+        first_name: "Platform",
+        last_name: "Administrator",
+        email: ADMIN_EMAIL,
+        specialty: "Administration",
+        institution: "FootSense",
+        ahpra_number: "",
+        status: "active",
+        last_login: new Date().toISOString(),
+        created_at: "",
+        patient_count: 0,
+      };
+      setRole("admin");
+      setUser(fallbackAdmin);
+      setCachedSession({ role: "admin", user: fallbackAdmin, authEmail: trimmed });
+      return true;
     }
-  }
 
-  const loginWithEmail = useCallback(async (email: string) => {
-    const trimmed = email.trim().toLowerCase();
-    if (!trimmed) return { success: false, error: "Email is required." };
-
-    try {
-      // Look up user role from users_profile
-      const { data: profile } = await supabase
-        .from("users_profile")
-        .select("id, email, first_name, last_name, role")
-        .eq("email", trimmed)
-        .maybeSingle();
-
-      if (!profile) return { success: false, error: "No account found with this email." };
-
-      if (profile.role === "clinician") {
-        const { data: clinician } = await supabase
-          .from("clinician_summary")
-          .select("*")
-          .eq("email", trimmed)
-          .single();
-        if (!clinician) return { success: false, error: "Clinician profile not found." };
-        setRole("clinician");
-        setUser(clinician as Clinician);
-        window.localStorage.setItem(ROLE_KEY, "clinician");
-        window.localStorage.setItem(EMAIL_KEY, trimmed);
-        return { success: true };
-      }
-
-      if (profile.role === "admin") {
-        setRole("admin");
-        setUser({
-          id: profile.id,
-          name: `${profile.first_name} ${profile.last_name}`.trim() || "Admin",
-          email: profile.email,
-          specialty: "Administration",
-          institution: "FootSense",
-          ahpra_number: "",
-          avatar_initials: (profile.first_name?.[0] ?? "A") + (profile.last_name?.[0] ?? ""),
-          status: "active",
-          last_login: new Date().toISOString(),
-          created_at: "",
-          patient_count: 0,
-        });
-        window.localStorage.setItem(ROLE_KEY, "admin");
-        window.localStorage.setItem(EMAIL_KEY, trimmed);
-        return { success: true };
-      }
-
-      return { success: false, error: "This account does not have clinician or admin access." };
-    } catch (err) {
-      return { success: false, error: "Login failed. Please try again." };
+    // 5. Transient Delay Retry: If initial resolution failed right after Google OAuth,
+    // wait 500ms and try once more before declaring not found.
+    if (retryOnFailure) {
+      await new Promise((r) => setTimeout(r, 500));
+      return resolveUser(email, false);
     }
-  }, []);
 
-  const logout = useCallback(() => {
     setRole(null);
     setUser(null);
-    window.localStorage.removeItem(ROLE_KEY);
-    window.localStorage.removeItem(EMAIL_KEY);
+    setCachedSession(null);
+    return false;
+  }
+
+  useEffect(() => {
+    let isMounted = true;
+
+    // Single synchronized auth listener handling INITIAL_SESSION, SIGNED_IN, and SIGNED_OUT
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
+
+      if (event === "SIGNED_OUT" || !session?.user?.email) {
+        setCachedSession(null);
+        queryClient.clear();
+        setIsAuthenticated(false);
+        setAuthEmail(null);
+        setRole(null);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      const email = session.user.email;
+      setIsAuthenticated(true);
+      setAuthEmail(email);
+
+      await resolveUser(email, true);
+
+      if (isMounted) {
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const signInWithGoogle = useCallback(async (redirectPath?: string) => {
+    const redirectTo = window.location.origin + (redirectPath ?? window.location.pathname);
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo,
+        queryParams: {
+          prompt: "select_account",
+          access_type: "offline",
+        },
+      },
+    });
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Sign out error:", err);
+    }
+
+    // Wipe all session storage and in-memory query cache
+    setCachedSession(null);
+    queryClient.clear();
+
+    setRole(null);
+    setUser(null);
+    setIsAuthenticated(false);
+    setAuthEmail(null);
+  }, []);
+
+  const updateUser = useCallback((updatedFields: Partial<Clinician>) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated = { ...prev, ...updatedFields };
+      setCachedSession({ role, user: updated, authEmail });
+      return updated;
+    });
+  }, [role, authEmail]);
+
   const value = useMemo<AuthState>(
-    () => ({ role, user, loading, loginWithEmail, logout }),
-    [role, user, loading, loginWithEmail, logout],
+    () => ({ role, user, loading, isAuthenticated, authEmail, signInWithGoogle, logout, updateUser }),
+    [role, user, loading, isAuthenticated, authEmail, signInWithGoogle, logout, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -48,6 +48,9 @@ export default function AdminApplicationsPage() {
       toast.success("Application approved.");
       setApproveId(null);
     },
+    onError: (err: any) => {
+      toast.error(err?.message || "Failed to approve application.");
+    },
   });
 
   const declineMutation = useMutation({
@@ -57,6 +60,9 @@ export default function AdminApplicationsPage() {
       queryClient.invalidateQueries({ queryKey: ["admin"] });
       toast("Application declined.");
       setDeclineId(null);
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || "Failed to decline application.");
     },
   });
 
@@ -122,7 +128,7 @@ export default function AdminApplicationsPage() {
         <AlertDialogContent className="glass-panel">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Approve {approving?.full_name}'s application?
+              Approve {approving?.first_name} {approving?.last_name}'s application?
             </AlertDialogTitle>
             <AlertDialogDescription>
               They will be able to sign in after approval.
@@ -144,7 +150,7 @@ export default function AdminApplicationsPage() {
       <Dialog open={!!declineId} onOpenChange={(o) => !o && setDeclineId(null)}>
         <DialogContent className="glass-panel">
           <DialogHeader>
-            <DialogTitle>Decline {declining?.full_name}'s application</DialogTitle>
+            <DialogTitle>Decline {declining?.first_name} {declining?.last_name}'s application</DialogTitle>
             <DialogDescription>
               You can optionally add a reason. It will be recorded with the application.
             </DialogDescription>

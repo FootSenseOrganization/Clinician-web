@@ -5,12 +5,12 @@ export type UserRole = "admin" | "clinician" | null;
 
 export interface Clinician {
   id: string;
-  name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   specialty: string;
   institution: string;
   ahpra_number: string;
-  avatar_initials: string;
   status: string;
   last_login: string;
   created_at: string;
@@ -19,7 +19,8 @@ export interface Clinician {
 
 export interface Patient {
   id: string;
-  name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   age: number | null;
   diabetes_type: string | null;
@@ -30,7 +31,6 @@ export interface Patient {
   latest_risk_level: RiskLevel;
   latest_risk_score: number;
   total_measurements: number;
-  avatar_initials: string | null;
   country_code: string;
   address: string;
 }
@@ -67,6 +67,10 @@ export interface MeasurementImages {
   detected_9pts_url: string;
   room_calibrated_url: string;
   raw_url: string;
+  left_url?: string;
+  right_url?: string;
+  left_detected_url?: string;
+  right_detected_url?: string;
 }
 
 export interface Measurement {
@@ -94,7 +98,8 @@ export interface Alert {
   patient_id: string;
   clinician_id: string;
   measurement_id: string | null;
-  patient_name: string;
+  patient_first_name: string;
+  patient_last_name: string;
   timestamp: string;
   risk_level: RiskLevel;
   risk_score: number;
@@ -111,7 +116,8 @@ export type ApplicationStatus = "pending" | "approved" | "declined";
 export interface Application {
   id: string;
   ahpra_number: string;
-  full_name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   specialty: string;
   institution: string;
@@ -124,7 +130,8 @@ export interface Application {
 
 export interface RegisteredClinician {
   id: string;
-  name: string;
+  first_name: string;
+  last_name: string;
   email: string;
   specialty: string;
   institution: string;
@@ -140,7 +147,8 @@ export interface AssignmentRequest {
   id: string;
   patient_id: string | null;
   clinician_id: string;
-  patient_name: string;
+  patient_first_name: string;
+  patient_last_name: string;
   patient_email: string;
   diabetes_type: string;
   age: number;
@@ -155,7 +163,8 @@ export interface Remark {
   id: string;
   patient_id: string;
   clinician_id: string;
-  clinician_name: string; // joined from users_profile
+  clinician_first_name: string;
+  clinician_last_name: string;
   content: string;
   created_at: string;
   updated_at: string;
@@ -165,7 +174,8 @@ export interface Instruction {
   id: string;
   patient_id: string;
   clinician_id: string;
-  clinician_name: string; // joined from users_profile
+  clinician_first_name: string;
+  clinician_last_name: string;
   content: string;
   visible_to_patient: boolean;
   created_at: string;

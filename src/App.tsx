@@ -1,6 +1,8 @@
 import { Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/context/AuthContext";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { PublicOnlyRoute } from "@/components/auth/PublicOnlyRoute";
 
 import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/LoginPage";
@@ -24,23 +26,100 @@ export default function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/login"
+          element={
+            <PublicOnlyRoute>
+              <LoginPage />
+            </PublicOnlyRoute>
+          }
+        />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/register/status" element={<RegisterStatusPage />} />
 
         {/* Admin routes */}
-        <Route path="/admin" element={<AdminLoginPage />} />
-        <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-        <Route path="/admin/applications" element={<AdminApplicationsPage />} />
-        <Route path="/admin/clinicians" element={<AdminCliniciansPage />} />
+        <Route
+          path="/admin"
+          element={
+            <PublicOnlyRoute>
+              <AdminLoginPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/admin/dashboard"
+          element={
+            <ProtectedRoute allowedRole="admin">
+              <AdminDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/applications"
+          element={
+            <ProtectedRoute allowedRole="admin">
+              <AdminApplicationsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/clinicians"
+          element={
+            <ProtectedRoute allowedRole="admin">
+              <AdminCliniciansPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Clinician routes */}
-        <Route path="/dashboard" element={<ClinicianDashboardPage />} />
-        <Route path="/patients" element={<PatientListPage />} />
-        <Route path="/patients/:id" element={<PatientDetailPage />} />
-        <Route path="/alerts" element={<AlertsCentrePage />} />
-        <Route path="/assignments" element={<AssignmentsPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute allowedRole="clinician">
+              <ClinicianDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/patients"
+          element={
+            <ProtectedRoute allowedRole="clinician">
+              <PatientListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/patients/:id"
+          element={
+            <ProtectedRoute allowedRole="clinician">
+              <PatientDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/alerts"
+          element={
+            <ProtectedRoute allowedRole="clinician">
+              <AlertsCentrePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/assignments"
+          element={
+            <ProtectedRoute allowedRole="clinician">
+              <AssignmentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute allowedRole="clinician">
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* 404 */}
         <Route path="*" element={<NotFoundPage />} />

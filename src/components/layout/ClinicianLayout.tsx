@@ -63,21 +63,19 @@ export function ClinicianLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
 
   const { data: unread = 0 } = useQuery({
-    queryKey: ["alerts", "unreadCount"],
+    queryKey: ["alerts", "unreadCount", user?.id],
     queryFn: () => alertController.getUnreadCount(),
+    enabled: !!user?.id,
     refetchInterval: 30_000,
   });
 
   const { data: pendingAssignments = [] } = useQuery({
-    queryKey: ["assignments", "pending"],
+    queryKey: ["assignments", "pending", user?.id],
     queryFn: () => assignmentController.getPendingAssignments(),
+    enabled: !!user?.id,
   });
 
-  useEffect(() => {
-    if (!loading && role !== "clinician") navigate("/login");
-  }, [loading, role, navigate]);
-
-  if (loading || role !== "clinician" || !user) {
+  if (loading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <p className="text-sm text-muted-foreground">Checking your session…</p>
@@ -99,11 +97,11 @@ export function ClinicianLayout({ children }: { children: ReactNode }) {
 
         <div className="mt-6 flex items-center gap-3 rounded-xl bg-sidebar-accent/60 p-3">
           <span className="inline-flex size-10 items-center justify-center rounded-full brand-gradient text-sm font-semibold text-primary-foreground">
-            {user.avatar_initials}
+            {user.first_name?.[0] ?? ""}{user.last_name?.[0] ?? ""}
           </span>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-sidebar-accent-foreground">
-              {user.name}
+              {user.first_name} {user.last_name}
             </p>
             <p className="truncate text-xs text-sidebar-foreground/60">
               {user.specialty}
@@ -120,9 +118,9 @@ export function ClinicianLayout({ children }: { children: ReactNode }) {
         </nav>
 
         <button
-          onClick={() => {
-            logout();
-            navigate("/");
+          onClick={async () => {
+            await logout();
+            navigate("/login", { replace: true });
           }}
           className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/75 transition-colors duration-200 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
         >

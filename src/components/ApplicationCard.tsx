@@ -15,7 +15,7 @@ export function ApplicationCard({
     <article className="surface-card p-6 transition-all duration-200 hover:shadow-elevated">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-foreground">{app.full_name}</h2>
+          <h3 className="font-semibold text-foreground">{app.first_name} {app.last_name}</h3>
           <p className="mt-1 text-xs text-muted-foreground">
             Submitted: {formatDate(app.submitted_at)}
           </p>

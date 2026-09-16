@@ -21,18 +21,21 @@ export default function ClinicianDashboardPage() {
   const { user } = useAuth();
 
   const { data: patients = [] } = useQuery({
-    queryKey: ["patients"],
-    queryFn: () => patientController.getAllPatients(),
+    queryKey: ["patients", user?.id],
+    queryFn: () => (user?.id ? patientController.getAllPatients(user.id) : []),
+    enabled: !!user?.id,
   });
 
   const { data: alerts = [] } = useQuery({
-    queryKey: ["alerts"],
-    queryFn: () => alertController.getAllAlerts(),
+    queryKey: ["alerts", user?.id],
+    queryFn: () => (user?.id ? alertController.getAllAlerts(user.id) : []),
+    enabled: !!user?.id,
   });
 
   const { data: unread = [] } = useQuery({
-    queryKey: ["alerts", "unread"],
-    queryFn: () => alertController.getUnreadAlerts(),
+    queryKey: ["alerts", "unread", user?.id],
+    queryFn: () => (user?.id ? alertController.getUnreadAlerts(user.id) : []),
+    enabled: !!user?.id,
   });
 
   const high = patients.filter((p) => p.latest_risk_level === "high").length;
@@ -45,7 +48,7 @@ export default function ClinicianDashboardPage() {
     )
     .slice(0, 4);
 
-  const lastName = user?.name?.split(" ").slice(-1)[0] ?? "";
+  const lastName = user?.last_name ?? "";
 
   useEffect(() => {
     document.title = "Clinician Dashboard — FootSense";
@@ -90,7 +93,7 @@ export default function ClinicianDashboardPage() {
                 className="block rounded-xl border border-border p-4 transition-all duration-200 hover:border-primary/40 hover:shadow-card"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold text-foreground">{a.patient_name}</p>
+                  <p className="font-semibold text-foreground">{a.patient_first_name} {a.patient_last_name}</p>
                   <RiskBadge level={a.risk_level} />
                 </div>
                 <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{a.message}</p>
@@ -120,9 +123,9 @@ export default function ClinicianDashboardPage() {
                   to={`/patients/${p.id}`}
                   className="flex items-center gap-3 rounded-xl border border-transparent p-3 transition-colors duration-200 hover:border-border hover:bg-muted"
                 >
-                  <Avatar initials={p.avatar_initials ?? ""} />
+                  <Avatar initials={((p.first_name?.[0] ?? "") + (p.last_name?.[0] ?? "")).toUpperCase()} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-foreground">{p.name}</p>
+                    <p className="truncate text-sm font-semibold text-foreground">{p.first_name} {p.last_name}</p>
                     <p className="text-xs text-muted-foreground">
                       Last scan {p.last_measurement ? formatDate(p.last_measurement) : "—"}
                     </p>

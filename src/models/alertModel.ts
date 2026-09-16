@@ -20,6 +20,16 @@ export async function findByPatientId(patientId: string): Promise<Alert[]> {
   return data ?? [];
 }
 
+export async function findByClinicianId(clinicianId: string): Promise<Alert[]> {
+  const { data, error } = await supabase
+    .from("alert_with_patient_name")
+    .select("*")
+    .eq("clinician_id", clinicianId)
+    .order("timestamp", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function acknowledge(alertId: string): Promise<void> {
   const { error } = await supabase
     .from("alerts")

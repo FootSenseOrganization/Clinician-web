@@ -93,7 +93,7 @@ export default function AdminDashboardPage() {
                     i % 2 === 1 ? "bg-muted/30" : ""
                   }`}
                 >
-                  <td className="px-6 py-3 font-semibold">{a.full_name}</td>
+                  <td className="px-6 py-3 font-semibold">{a.first_name} {a.last_name}</td>
                   <td className="px-6 py-3">
                     <span className="rounded-md bg-brand-soft px-2 py-1 font-mono text-xs font-semibold text-accent-foreground">
                       {a.ahpra_number}

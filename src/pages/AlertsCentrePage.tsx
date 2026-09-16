@@ -7,17 +7,20 @@ import { PageHeader } from "@/components/PageHeader";
 import { RiskBadge } from "@/components/RiskBadge";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/utils/format";
+import { useAuth } from "@/context/AuthContext";
 import * as alertController from "@/controllers/alertController";
 
 type Filter = "all" | "unread" | "high" | "moderate";
 
 export default function AlertsCentrePage() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<Filter>("all");
 
   const { data: alerts = [] } = useQuery({
-    queryKey: ["alerts"],
-    queryFn: () => alertController.getAllAlerts(),
+    queryKey: ["alerts", user?.id],
+    queryFn: () => (user?.id ? alertController.getAllAlerts(user.id) : []),
+    enabled: !!user?.id,
   });
 
   const acknowledgeMutation = useMutation({
@@ -92,7 +95,7 @@ export default function AlertsCentrePage() {
                   to={`/patients/${a.patient_id}`}
                   className="text-base font-semibold text-foreground hover:text-primary hover:underline"
                 >
-                  {a.patient_name}
+                  {a.patient_first_name} {a.patient_last_name}
                 </Link>
                 <RiskBadge level={a.risk_level} />
                 <span className="text-sm font-semibold tabular-nums text-muted-foreground">

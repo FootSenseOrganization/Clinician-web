@@ -1,151 +1,105 @@
-import { cn } from "@/lib/utils";
-import { getAsymmetryTone } from "@/services/measurementService";
+import { useState, useEffect } from "react";
+import { ExternalLink, ImageOff } from "lucide-react";
 import type { Measurement } from "@/types";
 
-function toneCls(tone: "low" | "moderate" | "high") {
-  return tone === "high"
-    ? "text-risk-high"
-    : tone === "moderate"
-      ? "text-risk-moderate"
-      : "text-risk-low";
-}
-
-function toneDot(tone: "low" | "moderate" | "high") {
-  return tone === "high" ? "bg-risk-high" : tone === "moderate" ? "bg-risk-moderate" : "bg-risk-low";
-}
-
 /**
- * Renders the combined thermal heatmap image (both feet) with clinical point overlays.
- * The GCS image is a composite — both feet in one image.
+ * Renders the single thermal heatmap image containing BOTH feet.
+ * The images in Supabase Storage (footsense-heatmaps) are composite dual-foot scans.
+ * For 'detected_9pts', the 9 clinical points are already drawn directly into the heatmap PNG.
+ * Per clinical requirements, manual point annotations are NOT overlaid onto the image.
  */
 export function ThermalView({
   measurement,
-  showPoints,
   imageType = "detected_9pts",
 }: {
   measurement: Measurement;
-  showPoints: boolean;
+  showPoints?: boolean;
   imageType?: "detected_9pts" | "room_calibrated" | "raw";
 }) {
+  const [imageError, setImageError] = useState(false);
+
+  // Pick target image with fallback chain
   const imageUrl =
     imageType === "room_calibrated"
-      ? measurement.images.room_calibrated_url
+      ? (measurement.images.room_calibrated_url || measurement.images.detected_9pts_url || measurement.images.raw_url)
       : imageType === "raw"
-        ? measurement.images.raw_url
-        : measurement.images.detected_9pts_url;
+        ? (measurement.images.raw_url || measurement.images.room_calibrated_url || measurement.images.detected_9pts_url)
+        : (measurement.images.detected_9pts_url || measurement.images.room_calibrated_url || measurement.images.raw_url);
 
-  const pointsLeft = measurement.clinical_points.left;
-  const pointsRight = measurement.clinical_points.right;
-
-  // The image native size from the GCS heatmaps is typically ~320x420
-  // pixel_x/pixel_y are absolute coordinates on the original image
-  const IMAGE_WIDTH = 320;
-  const IMAGE_HEIGHT = 420;
+  // Automatically reset error whenever the active image URL changes
+  useEffect(() => {
+    setImageError(false);
+  }, [imageUrl]);
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <div className="relative overflow-hidden rounded-xl border border-border bg-slate-800/90 shadow-card">
-        {imageUrl ? (
+    <div className="flex flex-col items-center gap-4 w-full">
+      <div className="relative overflow-hidden rounded-xl border border-border bg-slate-950/90 shadow-card flex items-center justify-center min-h-[340px] w-full max-w-[720px] p-2">
+        {imageUrl && !imageError ? (
           <img
+            key={imageUrl}
             src={imageUrl}
-            alt="Thermal heatmap of both feet"
-            className="block h-auto w-full max-w-[480px]"
-            crossOrigin="anonymous"
+            alt={`FootSense Thermal Scan (${imageType})`}
+            className="block h-auto max-h-[580px] w-full rounded-lg object-contain"
+            referrerPolicy="no-referrer"
+            loading="eager"
+            onError={() => setImageError(true)}
           />
         ) : (
-          <div className="flex h-[420px] w-[320px] items-center justify-center">
-            <span className="text-xs font-medium text-white/40">No thermal image available</span>
+          <div className="flex flex-col items-center justify-center gap-3 p-8 text-center text-muted-foreground">
+            <ImageOff className="size-10 text-muted-foreground/50" />
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                {imageError ? "Thermal image could not be loaded directly" : "No thermal image linked"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {imageError
+                  ? "The browser was unable to load the asset in the current frame."
+                  : "No image link was found in the measurement record."}
+              </p>
+            </div>
+            {imageUrl && (
+              <a
+                href={imageUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1.5 text-xs text-primary underline underline-offset-4 hover:text-primary/80"
+              >
+                <span>Open Direct Storage URL</span>
+                <ExternalLink className="size-3" />
+              </a>
+            )}
           </div>
-        )}
-
-        {showPoints && imageUrl && (
-          <>
-            {/* Left foot points */}
-            {pointsLeft.map((p, i) => {
-              const opposite = pointsRight[i]?.temp_celsius ?? p.temp_celsius;
-              const asym = Math.abs(p.temp_celsius - opposite);
-              const tone = getAsymmetryTone(asym);
-              return (
-                <div
-                  key={`L-${p.zone}`}
-                  className="group absolute -translate-x-1/2 -translate-y-1/2"
-                  style={{
-                    left: `${(p.pixel_x / IMAGE_WIDTH) * 100}%`,
-                    top: `${(p.pixel_y / IMAGE_HEIGHT) * 100}%`,
-                  }}
-                >
-                  <button
-                    className={cn(
-                      "flex size-5 items-center justify-center rounded-full text-[9px] font-bold text-white ring-2 ring-white/70 transition-transform duration-200 hover:scale-125",
-                      toneDot(tone),
-                    )}
-                  >
-                    {i + 1}
-                  </button>
-                  <div className="pointer-events-none absolute left-1/2 top-7 z-10 w-44 -translate-x-1/2 rounded-lg border border-border bg-popover p-3 text-left opacity-0 shadow-elevated transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
-                    <p className="text-[10px] font-semibold text-primary">Left Foot</p>
-                    <p className="text-xs font-semibold text-foreground">{p.zone}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Temperature: {p.temp_celsius.toFixed(1)}°C
-                    </p>
-                    <p className={cn("text-xs font-semibold", toneCls(tone))}>
-                      Asymmetry: {asym > 0 ? "+" : ""}
-                      {asym.toFixed(1)}°C
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Right foot points */}
-            {pointsRight.map((p, i) => {
-              const opposite = pointsLeft[i]?.temp_celsius ?? p.temp_celsius;
-              const asym = Math.abs(p.temp_celsius - opposite);
-              const tone = getAsymmetryTone(asym);
-              return (
-                <div
-                  key={`R-${p.zone}`}
-                  className="group absolute -translate-x-1/2 -translate-y-1/2"
-                  style={{
-                    left: `${(p.pixel_x / IMAGE_WIDTH) * 100}%`,
-                    top: `${(p.pixel_y / IMAGE_HEIGHT) * 100}%`,
-                  }}
-                >
-                  <button
-                    className={cn(
-                      "flex size-5 items-center justify-center rounded-full text-[9px] font-bold text-white ring-2 ring-white/60 transition-transform duration-200 hover:scale-125",
-                      toneDot(tone),
-                    )}
-                  >
-                    {i + 1}
-                  </button>
-                  <div className="pointer-events-none absolute left-1/2 top-7 z-10 w-44 -translate-x-1/2 rounded-lg border border-border bg-popover p-3 text-left opacity-0 shadow-elevated transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
-                    <p className="text-[10px] font-semibold text-chart-2">Right Foot</p>
-                    <p className="text-xs font-semibold text-foreground">{p.zone}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Temperature: {p.temp_celsius.toFixed(1)}°C
-                    </p>
-                    <p className={cn("text-xs font-semibold", toneCls(tone))}>
-                      Asymmetry: {asym > 0 ? "+" : ""}
-                      {asym.toFixed(1)}°C
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </>
         )}
       </div>
 
-      {/* Image type selector */}
-      <div className="flex gap-1 text-xs">
-        <span className="rounded-full bg-muted px-2.5 py-1 font-medium">
-          {imageType === "detected_9pts"
-            ? "9-Point Detection"
-            : imageType === "room_calibrated"
-              ? "Room Calibrated"
-              : "Raw Thermal"}
-        </span>
+      {/* Footer view info */}
+      <div className="flex flex-wrap items-center justify-between gap-3 w-full max-w-[720px] px-1 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="rounded-full bg-muted px-2.5 py-1 font-medium text-foreground/80">
+            {imageType === "detected_9pts"
+              ? "9-Point Detection (Dual-Foot Scan)"
+              : imageType === "room_calibrated"
+                ? "Room Calibrated (Dual-Foot Scan)"
+                : "Raw Thermal (Dual-Foot Scan)"}
+          </span>
+          {imageType === "detected_9pts" && (
+            <span className="text-[11px] text-muted-foreground">
+              (ML detected points 1–9 already rendered in image)
+            </span>
+          )}
+        </div>
+
+        {imageUrl && !imageError && (
+          <a
+            href={imageUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <span>Open in new tab</span>
+            <ExternalLink className="size-3" />
+          </a>
+        )}
       </div>
     </div>
   );

@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ChevronDown, Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Pencil, Plus, Trash2 } from "lucide-react";
 import { Fragment, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -24,7 +24,7 @@ import { formatDate, formatDateTime } from "@/utils/format";
 import { getAsymmetryTone } from "@/services/measurementService";
 import { useAuth } from "@/context/AuthContext";
 import * as patientController from "@/controllers/patientController";
-import type { Instruction, Remark } from "@/types";
+import type { Instruction, Remark, RiskLevel } from "@/types";
 
 type TabKey = "thermal" | "history" | "notes";
 type ImageType = "detected_9pts" | "room_calibrated" | "raw";
@@ -48,7 +48,6 @@ export default function PatientDetailPage() {
 
   const [tab, setTab] = useState<TabKey>("thermal");
   const [selectedId, setSelectedId] = useState<string>("");
-  const [showPoints, setShowPoints] = useState(true);
   const [imageType, setImageType] = useState<ImageType>("detected_9pts");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [draftRemark, setDraftRemark] = useState<string | null>(null);
@@ -209,27 +208,33 @@ export default function PatientDetailPage() {
           Patients
         </Link>
         <span>›</span>
-        <span className="font-medium text-foreground">{patient.name}</span>
+        <span className="font-medium text-foreground">{patient.first_name} {patient.last_name}</span>
       </nav>
 
       <section className="surface-card p-6">
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div className="flex items-center gap-4">
-            <Avatar initials={patient.avatar_initials ?? ""} className="size-16 text-lg" />
+            <Avatar initials={((patient.first_name?.[0] ?? "") + (patient.last_name?.[0] ?? "")).toUpperCase()} className="size-16 text-lg" />
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">{patient.name}</h1>
+              <h1 className="text-2xl font-bold tracking-tight">{patient.first_name} {patient.last_name}</h1>
               <p className="text-sm text-muted-foreground">{patient.email}</p>
               <p className="text-sm text-muted-foreground">{patient.mobile_number}</p>
             </div>
           </div>
           <div className="flex items-center gap-5">
             <div className="text-right">
-              <RiskBadge level={patient.latest_risk_level} size="lg" />
+              <RiskBadge
+                level={(selected?.analysis.risk_score && selected.analysis.risk_score > 0) ? selected.analysis.risk_level : patient.latest_risk_level}
+                size="lg"
+              />
               <p className="mt-2 text-xs text-muted-foreground">
                 Last scan {patient.last_measurement ? formatDateTime(patient.last_measurement) : "—"}
               </p>
             </div>
-            <RadialScore score={patient.latest_risk_score} level={patient.latest_risk_level} />
+            <RadialScore
+              score={(selected?.analysis.risk_score && selected.analysis.risk_score > 0) ? selected.analysis.risk_score : patient.latest_risk_score}
+              level={(selected?.analysis.risk_score && selected.analysis.risk_score > 0) ? selected.analysis.risk_level : patient.latest_risk_level}
+            />
           </div>
         </div>
 
@@ -300,18 +305,6 @@ export default function PatientDetailPage() {
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => setShowPoints((v) => !v)}
-                      className={cn(
-                        "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200",
-                        showPoints
-                          ? "brand-gradient text-primary-foreground"
-                          : "border border-border text-foreground hover:bg-muted",
-                      )}
-                    >
-                      {showPoints ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
-                      Points
-                    </button>
                     <select
                       value={imageType}
                       onChange={(e) => setImageType(e.target.value as ImageType)}
@@ -327,7 +320,6 @@ export default function PatientDetailPage() {
                 <div className="mt-6 flex justify-center">
                   <ThermalView
                     measurement={selected}
-                    showPoints={showPoints}
                     imageType={imageType}
                   />
                 </div>
@@ -611,7 +603,7 @@ export default function PatientDetailPage() {
                   <li key={r.id} className="rounded-xl border border-border p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold">{r.clinician_name}</p>
+                        <p className="text-sm font-semibold">{r.clinician_first_name} {r.clinician_last_name}</p>
                         <p className="text-xs text-muted-foreground">
                           {formatDateTime(r.created_at)}
                         </p>
@@ -718,7 +710,7 @@ export default function PatientDetailPage() {
                   <li key={ins.id} className="rounded-xl border border-border p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold">{ins.clinician_name}</p>
+                        <p className="text-sm font-semibold">{ins.clinician_first_name} {ins.clinician_last_name}</p>
                         <p className="text-xs text-muted-foreground">
                           {formatDateTime(ins.created_at)}
                         </p>

@@ -39,7 +39,8 @@ export default function AdminCliniciansPage() {
     if (!q) return clinicians;
     return clinicians.filter(
       (c) =>
-        c.name.toLowerCase().includes(q) ||
+        c.first_name.toLowerCase().includes(q) ||
+        c.last_name.toLowerCase().includes(q) ||
         c.ahpra_number.toLowerCase().includes(q) ||
         c.institution.toLowerCase().includes(q),
     );
@@ -83,7 +84,7 @@ export default function AdminCliniciansPage() {
                   }`}
                 >
                   <td className="px-5 py-3">
-                    <p className="font-semibold text-foreground">{c.name}</p>
+                    <p className="font-semibold text-foreground">{c.first_name} {c.last_name}</p>
                     <p className="text-xs text-muted-foreground">{c.email}</p>
                   </td>
                   <td className="px-5 py-3">
@@ -131,7 +132,7 @@ export default function AdminCliniciansPage() {
         <AlertDialogContent className="glass-panel">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {pending?.status === "active" ? "Suspend" : "Reactivate"} {pending?.name}?
+              {pending?.status === "active" ? "Suspend" : "Reactivate"} {pending?.first_name} {pending?.last_name}?
             </AlertDialogTitle>
             <AlertDialogDescription>
               {pending?.status === "active"

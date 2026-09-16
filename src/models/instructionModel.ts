@@ -4,20 +4,14 @@ import type { Instruction } from "@/types";
 export async function findByPatientId(patientId: string): Promise<Instruction[]> {
   const { data, error } = await supabase
     .from("instructions")
-    .select("*, clinician:users_profile!clinician_id(first_name, last_name)")
+    .select("*, users_profile!clinician_id(first_name, last_name)")
     .eq("patient_id", patientId)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []).map((i) => ({
-    id: i.id,
-    patient_id: i.patient_id,
-    clinician_id: i.clinician_id,
-    clinician_name: i.clinician
-      ? `${(i.clinician as { first_name: string }).first_name} ${(i.clinician as { last_name: string }).last_name}`.trim()
-      : "Unknown",
-    content: i.content,
-    visible_to_patient: i.visible_to_patient,
-    created_at: i.created_at,
+  return (data ?? []).map((row: any) => ({
+    ...row,
+    clinician_first_name: row.users_profile?.first_name ?? "Unknown",
+    clinician_last_name: row.users_profile?.last_name ?? "Clinician",
   }));
 }
 
@@ -35,19 +29,14 @@ export async function create(
       content,
       visible_to_patient: visibleToPatient,
     })
-    .select("*, clinician:users_profile!clinician_id(first_name, last_name)")
+    .select("*, users_profile!clinician_id(first_name, last_name)")
     .single();
   if (error) throw error;
+  const row = data as any;
   return {
-    id: data.id,
-    patient_id: data.patient_id,
-    clinician_id: data.clinician_id,
-    clinician_name: data.clinician
-      ? `${(data.clinician as { first_name: string }).first_name} ${(data.clinician as { last_name: string }).last_name}`.trim()
-      : "Unknown",
-    content: data.content,
-    visible_to_patient: data.visible_to_patient,
-    created_at: data.created_at,
+    ...row,
+    clinician_first_name: row.users_profile?.first_name ?? "Unknown",
+    clinician_last_name: row.users_profile?.last_name ?? "Clinician",
   };
 }
 

@@ -6,6 +6,7 @@ import { ClinicianLayout } from "@/components/layout/ClinicianLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { Avatar, RiskBadge, RiskBar } from "@/components/RiskBadge";
 import { formatDate } from "@/utils/format";
+import { useAuth } from "@/context/AuthContext";
 import * as patientController from "@/controllers/patientController";
 import type { RiskLevel } from "@/types";
 
@@ -13,6 +14,7 @@ const selectCls =
   "rounded-lg border border-input bg-card px-3 py-2.5 text-sm outline-none transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-ring/30";
 
 export default function PatientListPage() {
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [risk, setRisk] = useState<"all" | RiskLevel>("all");
   const [sort, setSort] = useState<"scan" | "name" | "score">("scan");
@@ -22,13 +24,15 @@ export default function PatientListPage() {
   }, []);
 
   const { data: allPatients = [] } = useQuery({
-    queryKey: ["patients"],
-    queryFn: () => patientController.getAllPatients(),
+    queryKey: ["patients", user?.id],
+    queryFn: () => (user?.id ? patientController.getAllPatients(user.id) : []),
+    enabled: !!user?.id,
   });
 
   const { data: rows = [] } = useQuery({
-    queryKey: ["patients", "filtered", search, risk, sort],
-    queryFn: () => patientController.getPatientList(search, risk, sort),
+    queryKey: ["patients", "filtered", user?.id, search, risk, sort],
+    queryFn: () => (user?.id ? patientController.getPatientList(search, risk, sort, user.id) : []),
+    enabled: !!user?.id,
   });
 
   return (
@@ -93,10 +97,10 @@ export default function PatientListPage() {
                       to={`/patients/${p.id}`}
                       className="flex items-center gap-3"
                     >
-                      <Avatar initials={p.avatar_initials ?? ""} className="size-9" />
+                      <Avatar initials={`${p.first_name?.[0] ?? ""}${p.last_name?.[0] ?? ""}`} className="size-9" />
                       <div>
                         <p className="font-semibold text-foreground transition-colors hover:text-primary hover:underline">
-                          {p.name}
+                          {p.first_name} {p.last_name}
                         </p>
                         <p className="text-xs text-muted-foreground">{p.email}</p>
                       </div>

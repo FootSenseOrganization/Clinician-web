@@ -15,15 +15,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { formatDate } from "@/utils/format";
+import { useAuth } from "@/context/AuthContext";
 import * as assignmentController from "@/controllers/assignmentController";
 
 export default function AssignmentsPage() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [declineId, setDeclineId] = useState<string | null>(null);
 
   const { data: requests = [] } = useQuery({
-    queryKey: ["assignments", "pending"],
-    queryFn: () => assignmentController.getPendingAssignments(),
+    queryKey: ["assignments", "pending", user?.id],
+    queryFn: () => (user?.id ? assignmentController.getClinicianAssignments(user.id) : []),
+    enabled: !!user?.id,
   });
 
   const acceptMutation = useMutation({
@@ -31,7 +34,8 @@ export default function AssignmentsPage() {
     onSuccess: (_d, id) => {
       const req = requests.find((r) => r.id === id);
       queryClient.invalidateQueries({ queryKey: ["assignments"] });
-      toast.success(`${req?.patient_name ?? "Patient"} added to your patient list.`);
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      toast.success(`${req?.patient_first_name ?? "Patient"} added to your patient list.`);
     },
   });
 
@@ -60,7 +64,7 @@ export default function AssignmentsPage() {
       <div className="grid gap-4 md:grid-cols-2">
         {requests.filter((r) => r.status === "pending").map((r) => (
           <article key={r.id} className="surface-card p-6 transition-all duration-200 hover:shadow-elevated">
-            <h2 className="text-lg font-semibold text-foreground">{r.patient_name}</h2>
+            <h2 className="text-lg font-semibold text-foreground">{r.patient_first_name} {r.patient_last_name}</h2>
             <p className="text-sm text-muted-foreground">{r.patient_email}</p>
 
             <div className="mt-4 flex flex-wrap gap-2 text-xs">
@@ -108,7 +112,7 @@ export default function AssignmentsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Decline this request?</AlertDialogTitle>
             <AlertDialogDescription>
-              {declining?.patient_name} will not be assigned to your care and will be prompted to
+              {declining?.patient_first_name} will not be assigned to your care and will be prompted to
               select another clinician.
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -1,12 +1,14 @@
 import * as alertModel from "@/models/alertModel";
 import type { Alert } from "@/types";
 
-export async function getSortedAlerts(): Promise<Alert[]> {
-  return alertModel.findAll(); // already sorted DESC by model
+export async function getSortedAlerts(clinicianId?: string): Promise<Alert[]> {
+  return clinicianId ? alertModel.findByClinicianId(clinicianId) : alertModel.findAll();
 }
 
-export async function getUnreadAlerts(): Promise<Alert[]> {
-  const all = await alertModel.findAll();
+export async function getUnreadAlerts(clinicianId?: string): Promise<Alert[]> {
+  const all = clinicianId
+    ? await alertModel.findByClinicianId(clinicianId)
+    : await alertModel.findAll();
   return all.filter((a) => !a.acknowledged);
 }
 
