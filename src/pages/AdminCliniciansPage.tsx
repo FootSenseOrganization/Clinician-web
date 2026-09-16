@@ -1,6 +1,7 @@
 import { Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { PageHeader } from "@/components/PageHeader";
 import {
@@ -19,9 +20,11 @@ import * as adminController from "@/controllers/adminController";
 import type { RegisteredClinician } from "@/types";
 
 export default function AdminCliniciansPage() {
-  const [clinicians, setClinicians] = useState<RegisteredClinician[]>(() =>
-    adminController.getRegisteredClinicianList().map((c) => ({ ...c })),
-  );
+  const { data: clinicians = [] } = useQuery({
+    queryKey: ["admin", "clinicians"],
+    queryFn: () => adminController.getRegisteredClinicianList(),
+  });
+
   const [search, setSearch] = useState("");
   const [pendingId, setPendingId] = useState<string | null>(null);
 
@@ -140,13 +143,6 @@ export default function AdminCliniciansPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                setClinicians((prev) =>
-                  prev.map((c) =>
-                    c.id === pendingId
-                      ? { ...c, status: c.status === "active" ? "suspended" : "active" }
-                      : c,
-                  ),
-                );
                 toast.success("Clinician status updated.");
                 setPendingId(null);
               }}

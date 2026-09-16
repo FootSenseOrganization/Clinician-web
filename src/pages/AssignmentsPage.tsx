@@ -1,6 +1,7 @@
 import { Check, Cpu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ClinicianLayout } from "@/components/layout/ClinicianLayout";
 import { PageHeader } from "@/components/PageHeader";
 import {
@@ -17,20 +18,37 @@ import { formatDate } from "@/utils/format";
 import * as assignmentController from "@/controllers/assignmentController";
 
 export default function AssignmentsPage() {
-  const [requests, setRequests] = useState(() =>
-    assignmentController.getPendingAssignments().map((r) => ({ ...r })),
-  );
+  const queryClient = useQueryClient();
   const [declineId, setDeclineId] = useState<string | null>(null);
+
+  const { data: requests = [] } = useQuery({
+    queryKey: ["assignments", "pending"],
+    queryFn: () => assignmentController.getPendingAssignments(),
+  });
+
+  const acceptMutation = useMutation({
+    mutationFn: (id: string) => assignmentController.acceptAssignment(id),
+    onSuccess: (_d, id) => {
+      const req = requests.find((r) => r.id === id);
+      queryClient.invalidateQueries({ queryKey: ["assignments"] });
+      toast.success(`${req?.patient_name ?? "Patient"} added to your patient list.`);
+    },
+  });
+
+  const declineMutation = useMutation({
+    mutationFn: (id: string) => assignmentController.declineAssignment(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["assignments"] });
+      toast("Assignment request declined.");
+      setDeclineId(null);
+    },
+  });
 
   useEffect(() => {
     document.title = "Assignment Requests — FootSense";
   }, []);
 
   const declining = requests.find((r) => r.id === declineId);
-
-  function remove(id: string) {
-    setRequests((prev) => prev.filter((r) => r.id !== id));
-  }
 
   return (
     <ClinicianLayout>
@@ -40,7 +58,7 @@ export default function AssignmentsPage() {
       />
 
       <div className="grid gap-4 md:grid-cols-2">
-        {requests.map((r) => (
+        {requests.filter((r) => r.status === "pending").map((r) => (
           <article key={r.id} className="surface-card p-6 transition-all duration-200 hover:shadow-elevated">
             <h2 className="text-lg font-semibold text-foreground">{r.patient_name}</h2>
             <p className="text-sm text-muted-foreground">{r.patient_email}</p>
@@ -50,9 +68,11 @@ export default function AssignmentsPage() {
               <span className="rounded-full bg-muted px-2.5 py-1 font-medium">
                 {r.diabetes_type}
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-1 font-mono font-medium text-accent-foreground">
-                <Cpu className="size-3" /> {r.device_model}
-              </span>
+              {r.device_model && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2.5 py-1 font-mono font-medium text-accent-foreground">
+                  <Cpu className="size-3" /> {r.device_model}
+                </span>
+              )}
             </div>
 
             <p className="mt-4 text-xs text-muted-foreground">
@@ -61,11 +81,9 @@ export default function AssignmentsPage() {
 
             <div className="mt-5 flex gap-2">
               <button
-                onClick={() => {
-                  remove(r.id);
-                  toast.success(`${r.patient_name} added to your patient list.`);
-                }}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-risk-low px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-transform duration-200 hover:-translate-y-0.5"
+                onClick={() => acceptMutation.mutate(r.id)}
+                disabled={acceptMutation.isPending}
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-risk-low px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-transform duration-200 hover:-translate-y-0.5 disabled:opacity-60"
               >
                 <Check className="size-4" /> Accept
               </button>
@@ -78,7 +96,7 @@ export default function AssignmentsPage() {
             </div>
           </article>
         ))}
-        {requests.length === 0 && (
+        {requests.filter((r) => r.status === "pending").length === 0 && (
           <p className="surface-card p-10 text-center text-sm text-muted-foreground md:col-span-2">
             No pending assignment requests.
           </p>
@@ -98,9 +116,7 @@ export default function AssignmentsPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (declineId) remove(declineId);
-                toast("Assignment request declined.");
-                setDeclineId(null);
+                if (declineId) declineMutation.mutate(declineId);
               }}
             >
               Decline

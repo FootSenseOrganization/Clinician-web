@@ -1,5 +1,6 @@
 import * as profileService from "@/services/profileService";
+import type { Clinician } from "@/types";
 
-export function getProfileData() {
-  return profileService.getProfile();
+export async function getProfileData(clinicianId: string): Promise<Clinician | null> {
+  return profileService.getProfile(clinicianId);
 }

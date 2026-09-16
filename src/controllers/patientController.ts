@@ -2,47 +2,78 @@ import * as patientService from "@/services/patientService";
 import * as measurementService from "@/services/measurementService";
 import * as remarkService from "@/services/remarkService";
 import * as instructionService from "@/services/instructionService";
-import type { RiskLevel } from "@/types";
+import type { RiskLevel, Remark, Instruction, Measurement, Patient } from "@/types";
 
-export function getPatientList(
+export async function getPatientList(
   search: string,
   riskFilter: "all" | RiskLevel,
   sortBy: "scan" | "name" | "score",
-) {
+): Promise<Patient[]> {
   return patientService.getFilteredPatients(search, riskFilter, sortBy);
 }
 
-export function getAllPatients() {
+export async function getAllPatients(): Promise<Patient[]> {
   return patientService.getAllPatients();
 }
 
-export function getPatientDetail(id: string) {
+export async function getPatientDetail(id: string): Promise<Patient | null> {
   return patientService.getPatientById(id);
 }
 
-export function getPatientMeasurements(patientId: string) {
+export async function getPatientMeasurements(patientId: string): Promise<Measurement[]> {
   return measurementService.getPatientMeasurements(patientId);
 }
 
-export function getChartData(patientId: string) {
-  const measurements = measurementService.getPatientMeasurements(patientId);
+export function getChartData(measurements: Measurement[]) {
   return measurementService.computeChartData(measurements);
 }
 
-export function getPatientRemarks(patientId: string) {
+export async function getPatientRemarks(patientId: string): Promise<Remark[]> {
   return remarkService.getPatientRemarks(patientId);
 }
 
-export function getPatientInstructions(patientId: string) {
+export async function addRemark(
+  patientId: string,
+  clinicianId: string,
+  content: string,
+): Promise<Remark> {
+  return remarkService.addRemark(patientId, clinicianId, content);
+}
+
+export async function updateRemark(id: string, content: string): Promise<void> {
+  return remarkService.updateRemark(id, content);
+}
+
+export async function deleteRemark(id: string): Promise<void> {
+  return remarkService.deleteRemark(id);
+}
+
+export async function getPatientInstructions(patientId: string): Promise<Instruction[]> {
   return instructionService.getPatientInstructions(patientId);
 }
 
-export function getRiskDistribution() {
-  const patients = patientService.getAllPatients();
+export async function addInstruction(
+  patientId: string,
+  clinicianId: string,
+  content: string,
+): Promise<Instruction> {
+  return instructionService.addInstruction(patientId, clinicianId, content);
+}
+
+export async function updateInstruction(id: string, content: string): Promise<void> {
+  return instructionService.updateInstruction(id, content);
+}
+
+export async function deleteInstruction(id: string): Promise<void> {
+  return instructionService.deleteInstruction(id);
+}
+
+export async function getRiskDistribution() {
+  const patients = await patientService.getAllPatients();
   return patientService.getRiskDistribution(patients);
 }
 
-export function getRecentPatients(limit: number) {
-  const patients = patientService.getAllPatients();
+export async function getRecentPatients(limit: number): Promise<Patient[]> {
+  const patients = await patientService.getAllPatients();
   return patientService.getRecentPatients(patients, limit);
 }

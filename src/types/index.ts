@@ -1,6 +1,8 @@
 export type RiskLevel = "low" | "moderate" | "high";
 export type UserRole = "admin" | "clinician" | null;
 
+// ─── Users ────────────────────────────────────────────────────────────────────
+
 export interface Clinician {
   id: string;
   name: string;
@@ -12,80 +14,97 @@ export interface Clinician {
   status: string;
   last_login: string;
   created_at: string;
+  patient_count: number;
 }
 
 export interface Patient {
   id: string;
   name: string;
   email: string;
-  age: number;
-  diabetes_type: string;
-  diagnosis_year: number;
-  phone: string;
-  clinician_id: string;
-  last_measurement: string;
+  age: number | null;
+  diabetes_type: string | null;
+  diagnosis_year: number | null;
+  mobile_number: string;
+  clinician_id: string | null;
+  last_measurement: string | null;
   latest_risk_level: RiskLevel;
   latest_risk_score: number;
   total_measurements: number;
-  avatar_initials: string;
+  avatar_initials: string | null;
+  country_code: string;
+  address: string;
 }
 
-export interface SensorReading {
-  zone: string;
-  zone_name: string;
-  temp_celsius: number;
-}
+// ─── Measurements ─────────────────────────────────────────────────────────────
 
 export interface ClinicalPoint {
   zone: string;
   temp_celsius: number;
   pixel_x: number;
   pixel_y: number;
+  grid_col: number;
+  grid_row: number;
 }
 
 export interface MeasurementAnalysis {
   max_asymmetry_celsius: number;
-  asymmetry_zone: string;
-  hotspot_detected: boolean;
-  hotspot_zones: string[];
+  alert_triggered: boolean;
+  alert_severity: string | null;
+  clinical_points_left: ClinicalPoint[];
+  clinical_points_right: ClinicalPoint[];
+  zone_asymmetry: Record<string, number>;
+  calibrated_left: number[][];
+  calibrated_right: number[][];
+  // Derived fields (computed by model mapper)
   risk_score: number;
   risk_level: RiskLevel;
+  hotspot_detected: boolean;
+  hotspot_zones: string[];
+  asymmetry_zone: string;
+}
+
+export interface MeasurementImages {
+  detected_9pts_url: string;
+  room_calibrated_url: string;
+  raw_url: string;
 }
 
 export interface Measurement {
   id: string;
   user_id: string;
   timestamp: string;
-  sensor_readings: {
-    left_foot: SensorReading[];
-    right_foot: SensorReading[];
-  };
+  notes: string | null;
+  room_temp_start_celsius: number | null;
+  room_temp_end_celsius: number | null;
+  max_asymmetry_celsius: number | null;
+  alert_triggered: boolean;
+  alert_severity: string | null;
   analysis: MeasurementAnalysis;
   clinical_points: {
     left: ClinicalPoint[];
     right: ClinicalPoint[];
   };
-  image_urls: {
-    left: string;
-    right: string;
-    left_detected: string;
-    right_detected: string;
-  };
-  notes: string | null;
+  images: MeasurementImages;
 }
+
+// ─── Alerts ───────────────────────────────────────────────────────────────────
 
 export interface Alert {
   id: string;
   patient_id: string;
+  clinician_id: string;
+  measurement_id: string | null;
   patient_name: string;
   timestamp: string;
   risk_level: RiskLevel;
   risk_score: number;
   message: string;
-  zone: string;
-  asymmetry_value: number;
+  zone: string | null;
+  asymmetry_value: number | null;
   acknowledged: boolean;
 }
+
+// ─── Applications ─────────────────────────────────────────────────────────────
 
 export type ApplicationStatus = "pending" | "approved" | "declined";
 
@@ -99,6 +118,8 @@ export interface Application {
   status: ApplicationStatus;
   submitted_at: string;
   decline_reason?: string | undefined;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
 }
 
 export interface RegisteredClinician {
@@ -113,22 +134,28 @@ export interface RegisteredClinician {
   last_login: string;
 }
 
+// ─── Assignments ──────────────────────────────────────────────────────────────
+
 export interface AssignmentRequest {
   id: string;
+  patient_id: string | null;
+  clinician_id: string;
   patient_name: string;
   patient_email: string;
   diabetes_type: string;
   age: number;
-  device_model: string;
+  device_model: string | null;
   requested_at: string;
   status: string;
 }
+
+// ─── Remarks & Instructions ──────────────────────────────────────────────────
 
 export interface Remark {
   id: string;
   patient_id: string;
   clinician_id: string;
-  clinician_name: string;
+  clinician_name: string; // joined from users_profile
   content: string;
   created_at: string;
   updated_at: string;
@@ -138,7 +165,7 @@ export interface Instruction {
   id: string;
   patient_id: string;
   clinician_id: string;
-  clinician_name: string;
+  clinician_name: string; // joined from users_profile
   content: string;
   visible_to_patient: boolean;
   created_at: string;

@@ -1,11 +1,12 @@
 import { Link } from "react-router-dom";
 import { AlertTriangle, Bell, TrendingUp, Users } from "lucide-react";
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ClinicianLayout } from "@/components/layout/ClinicianLayout";
 import { Avatar, RiskBadge } from "@/components/RiskBadge";
 import { StatCard } from "@/components/StatCard";
 import { formatDate, timeAgo } from "@/utils/format";
-import { mockClinician } from "@/mock/mockData";
+import { useAuth } from "@/context/AuthContext";
 import * as patientController from "@/controllers/patientController";
 import * as alertController from "@/controllers/alertController";
 
@@ -17,17 +18,34 @@ function greeting() {
 }
 
 export default function ClinicianDashboardPage() {
-  const patients = patientController.getAllPatients();
-  const alerts = alertController.getAllAlerts();
-  const unread = alertController.getUnreadAlerts();
+  const { user } = useAuth();
+
+  const { data: patients = [] } = useQuery({
+    queryKey: ["patients"],
+    queryFn: () => patientController.getAllPatients(),
+  });
+
+  const { data: alerts = [] } = useQuery({
+    queryKey: ["alerts"],
+    queryFn: () => alertController.getAllAlerts(),
+  });
+
+  const { data: unread = [] } = useQuery({
+    queryKey: ["alerts", "unread"],
+    queryFn: () => alertController.getUnreadAlerts(),
+  });
+
   const high = patients.filter((p) => p.latest_risk_level === "high").length;
   const moderate = patients.filter((p) => p.latest_risk_level === "moderate").length;
   const recentPatients = [...patients]
     .sort(
       (a, b) =>
-        new Date(b.last_measurement).getTime() - new Date(a.last_measurement).getTime(),
+        new Date(b.last_measurement ?? 0).getTime() -
+        new Date(a.last_measurement ?? 0).getTime(),
     )
     .slice(0, 4);
+
+  const lastName = user?.name?.split(" ").slice(-1)[0] ?? "";
 
   useEffect(() => {
     document.title = "Clinician Dashboard — FootSense";
@@ -37,7 +55,7 @@ export default function ClinicianDashboardPage() {
     <ClinicianLayout>
       <div className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight">
-          {greeting()}, Dr. {mockClinician.name.split(" ").slice(-1)[0]}
+          {greeting()}, Dr. {lastName}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {new Date().toLocaleDateString("en-AU", {
@@ -102,11 +120,11 @@ export default function ClinicianDashboardPage() {
                   to={`/patients/${p.id}`}
                   className="flex items-center gap-3 rounded-xl border border-transparent p-3 transition-colors duration-200 hover:border-border hover:bg-muted"
                 >
-                  <Avatar initials={p.avatar_initials} />
+                  <Avatar initials={p.avatar_initials ?? ""} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-foreground">{p.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      Last scan {formatDate(p.last_measurement)}
+                      Last scan {p.last_measurement ? formatDate(p.last_measurement) : "—"}
                     </p>
                   </div>
                   <RiskBadge level={p.latest_risk_level} />

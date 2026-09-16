@@ -1,13 +1,40 @@
-import { mockApplications } from "@/mock/mockData";
-import type { Application } from "@/types";
+import { supabase } from "@/lib/supabaseClient";
+import type { Application, ApplicationStatus } from "@/types";
 
-export function findAll(): Application[] {
-  return mockApplications;
+export async function findAll(): Promise<Application[]> {
+  const { data, error } = await supabase
+    .from("applications")
+    .select("*")
+    .order("submitted_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
 }
 
-export function findByAhpraOrEmail(query: string): Application | undefined {
-  const q = query.trim().toLowerCase();
-  return mockApplications.find(
-    (a) => a.ahpra_number.toLowerCase() === q || a.email.toLowerCase() === q,
-  );
+export async function findByAhpraOrEmail(query: string): Promise<Application[]> {
+  const q = query.toLowerCase();
+  const { data, error } = await supabase
+    .from("applications")
+    .select("*")
+    .or(`ahpra_number.ilike.%${q}%,email.ilike.%${q}%,full_name.ilike.%${q}%`)
+    .order("submitted_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function updateStatus(
+  id: string,
+  status: ApplicationStatus,
+  reviewedBy: string,
+  declineReason?: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("applications")
+    .update({
+      status,
+      reviewed_by: reviewedBy,
+      reviewed_at: new Date().toISOString(),
+      decline_reason: declineReason ?? null,
+    })
+    .eq("id", id);
+  if (error) throw error;
 }

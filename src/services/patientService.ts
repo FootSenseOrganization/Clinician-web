@@ -1,20 +1,20 @@
 import * as patientModel from "@/models/patientModel";
 import type { Patient, RiskLevel } from "@/types";
 
-export function getAllPatients(): Patient[] {
+export async function getAllPatients(): Promise<Patient[]> {
   return patientModel.findAll();
 }
 
-export function getPatientById(id: string): Patient | undefined {
+export async function getPatientById(id: string): Promise<Patient | null> {
   return patientModel.findById(id);
 }
 
-export function getFilteredPatients(
+export async function getFilteredPatients(
   search: string,
   riskFilter: "all" | RiskLevel,
   sortBy: "scan" | "name" | "score",
-): Patient[] {
-  const patients = patientModel.findAll();
+): Promise<Patient[]> {
+  const patients = await patientModel.findAll();
   const q = search.trim().toLowerCase();
 
   let list = patients.filter(
@@ -26,7 +26,10 @@ export function getFilteredPatients(
   list = [...list].sort((a, b) => {
     if (sortBy === "name") return a.name.localeCompare(b.name);
     if (sortBy === "score") return b.latest_risk_score - a.latest_risk_score;
-    return new Date(b.last_measurement).getTime() - new Date(a.last_measurement).getTime();
+    return (
+      new Date(b.last_measurement ?? 0).getTime() -
+      new Date(a.last_measurement ?? 0).getTime()
+    );
   });
 
   return list;
@@ -44,7 +47,8 @@ export function getRecentPatients(patients: Patient[], limit: number): Patient[]
   return [...patients]
     .sort(
       (a, b) =>
-        new Date(b.last_measurement).getTime() - new Date(a.last_measurement).getTime(),
+        new Date(b.last_measurement ?? 0).getTime() -
+        new Date(a.last_measurement ?? 0).getTime(),
     )
     .slice(0, limit);
 }

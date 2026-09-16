@@ -3,27 +3,29 @@ import * as clinicianModel from "@/models/clinicianModel";
 import * as patientModel from "@/models/patientModel";
 import type { Application, RegisteredClinician } from "@/types";
 
-export function getApplications(): Application[] {
+export async function getApplications(): Promise<Application[]> {
   return applicationModel.findAll();
 }
 
-export function getRegisteredClinicians(): RegisteredClinician[] {
+export async function getRegisteredClinicians(): Promise<RegisteredClinician[]> {
   return clinicianModel.findAllRegistered();
 }
 
-export function computeAdminStats() {
-  const clinicians = clinicianModel.findAllRegistered();
-  const applications = applicationModel.findAll();
+export async function computeAdminStats() {
+  const [clinicians, applications, patients] = await Promise.all([
+    clinicianModel.findAllRegistered(),
+    applicationModel.findAll(),
+    patientModel.findAll(),
+  ]);
   return {
     pendingApplications: applications.filter((a) => a.status === "pending").length,
     activeClinicians: clinicians.filter((c) => c.status === "active").length,
     suspendedClinicians: clinicians.filter((c) => c.status === "suspended").length,
-    totalPatients: patientModel.findAll().length,
+    totalPatients: patients.length,
   };
 }
 
-export function getRecentApplications(limit: number): Application[] {
-  return [...applicationModel.findAll()]
-    .sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
-    .slice(0, limit);
+export async function getRecentApplications(limit: number): Promise<Application[]> {
+  const apps = await applicationModel.findAll();
+  return apps.slice(0, limit);
 }

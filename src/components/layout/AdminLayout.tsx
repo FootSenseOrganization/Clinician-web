@@ -2,6 +2,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { ClipboardList, LayoutDashboard, LogOut, ShieldCheck, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import * as adminController from "@/controllers/adminController";
 import { cn } from "@/lib/utils";
@@ -42,7 +43,13 @@ function NavItem({
 export function AdminLayout({ children }: { children: ReactNode }) {
   const { role, loading, logout } = useAuth();
   const navigate = useNavigate();
-  const { stats } = adminController.getAdminDashboardData();
+
+  const { data } = useQuery({
+    queryKey: ["admin", "dashboard"],
+    queryFn: () => adminController.getAdminDashboardData(),
+    enabled: role === "admin",
+  });
+  const stats = data?.stats ?? { pendingApplications: 0, activeClinicians: 0, suspendedClinicians: 0, totalPatients: 0 };
 
   useEffect(() => {
     if (!loading && role !== "admin") navigate("/admin");

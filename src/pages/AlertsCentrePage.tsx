@@ -1,21 +1,31 @@
 import { Link } from "react-router-dom";
 import { Check } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ClinicianLayout } from "@/components/layout/ClinicianLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { RiskBadge } from "@/components/RiskBadge";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/utils/format";
 import * as alertController from "@/controllers/alertController";
-import type { Alert } from "@/types";
 
 type Filter = "all" | "unread" | "high" | "moderate";
 
 export default function AlertsCentrePage() {
-  const [alerts, setAlerts] = useState<Alert[]>(() =>
-    alertController.getAllAlerts().map((a) => ({ ...a })),
-  );
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<Filter>("all");
+
+  const { data: alerts = [] } = useQuery({
+    queryKey: ["alerts"],
+    queryFn: () => alertController.getAllAlerts(),
+  });
+
+  const acknowledgeMutation = useMutation({
+    mutationFn: (alertId: string) => alertController.acknowledgeAlert(alertId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alerts"] });
+    },
+  });
 
   useEffect(() => {
     document.title = "Alerts Centre — FootSense";
@@ -42,14 +52,6 @@ export default function AlertsCentrePage() {
       <PageHeader
         title="Alerts Centre"
         subtitle="Clinical alerts derived from patient measurements"
-        actions={
-          <button
-            onClick={() => setAlerts((prev) => prev.map((a) => ({ ...a, acknowledged: true })))}
-            className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold transition-colors duration-200 hover:bg-muted"
-          >
-            Acknowledge All
-          </button>
-        }
       />
 
       <div className="mb-5 flex flex-wrap gap-2">
@@ -100,10 +102,10 @@ export default function AlertsCentrePage() {
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{a.message}</p>
               <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
                 <span>
-                  <strong className="text-foreground">Zone:</strong> {a.zone}
+                  <strong className="text-foreground">Zone:</strong> {a.zone ?? "—"}
                 </span>
                 <span>
-                  <strong className="text-foreground">Asymmetry:</strong> {a.asymmetry_value}°C
+                  <strong className="text-foreground">Asymmetry:</strong> {a.asymmetry_value ?? 0}°C
                 </span>
                 <span>{timeAgo(a.timestamp)}</span>
               </div>
@@ -115,12 +117,9 @@ export default function AlertsCentrePage() {
                 </span>
               ) : (
                 <button
-                  onClick={() =>
-                    setAlerts((prev) =>
-                      prev.map((x) => (x.id === a.id ? { ...x, acknowledged: true } : x)),
-                    )
-                  }
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-risk-low px-3 py-2 text-xs font-semibold text-primary-foreground transition-transform duration-200 hover:-translate-y-0.5"
+                  onClick={() => acknowledgeMutation.mutate(a.id)}
+                  disabled={acknowledgeMutation.isPending}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-risk-low px-3 py-2 text-xs font-semibold text-primary-foreground transition-transform duration-200 hover:-translate-y-0.5 disabled:opacity-60"
                 >
                   Acknowledge <Check className="size-4" />
                 </button>

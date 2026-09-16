@@ -1,0 +1,26 @@
+-- ============================================================================
+-- Migration 029: Seed Data v2
+-- NOTE: This migration cannot be applied via SQL because users_profile
+-- requires auth.users entries created via Supabase Admin API.
+-- Run the seed_v2.js script instead:
+--   node scratch/seed_v2.js
+--
+-- This file documents the seed data structure for reference.
+-- ============================================================================
+
+-- Auth Users Created (via Admin API):
+--   admin@footsense.io          → role: admin
+--   sarah.chen@citymedical.com  → role: clinician (Podiatry, City Medical)
+--   james.mitchell@healthcorp.com.au → role: clinician (Endocrinology, HealthCorp)
+--   tharaka.dilshan@footsense.io    → role: user (patient)
+--   kenath.perera@footsense.io      → role: user (patient)
+--   kavindu.methpura@footsense.io   → role: user (patient)
+--   steven.johnson@email.com        → role: user (patient)
+--   emily.carter@email.com          → role: user (patient)
+
+-- Measurements: 5 records pulled from MongoDB (real sensor data)
+-- Alerts:       3 records (high/moderate/low)
+-- Applications: 3 records (2 pending, 1 approved)
+-- Assignments:  2 records (pending)
+-- Remarks:      2 records
+-- Instructions: 2 records

@@ -11,7 +11,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { formatDate } from "@/utils/format";
-import * as profileController from "@/controllers/profileController";
+import { useAuth } from "@/context/AuthContext";
 
 const specialties = [
   "Podiatry",
@@ -26,15 +26,17 @@ const inputCls =
   "mt-1.5 w-full rounded-lg border border-input bg-card px-3.5 py-2.5 text-sm outline-none transition-all duration-200 focus:border-primary focus:ring-2 focus:ring-ring/30";
 
 export default function ProfilePage() {
-  const profile = profileController.getProfileData();
-  const [name, setName] = useState(profile.name);
-  const [email, setEmail] = useState(profile.email);
-  const [specialty, setSpecialty] = useState(profile.specialty);
-  const [institution, setInstitution] = useState(profile.institution);
+  const { user: profile } = useAuth();
+  const [name, setName] = useState(profile?.name ?? "");
+  const [email, setEmail] = useState(profile?.email ?? "");
+  const [specialty, setSpecialty] = useState(profile?.specialty ?? "");
+  const [institution, setInstitution] = useState(profile?.institution ?? "");
 
   useEffect(() => {
     document.title = "My Profile — FootSense";
   }, []);
+
+  if (!profile) return null;
 
   return (
     <ClinicianLayout>
@@ -122,13 +124,13 @@ export default function ProfilePage() {
           <p className="text-muted-foreground">
             Member since:{" "}
             <span className="font-medium text-foreground">
-              {formatDate(profile.created_at)}
+              {profile.created_at ? formatDate(profile.created_at) : "—"}
             </span>
           </p>
           <p className="text-muted-foreground">
             Last login:{" "}
             <span className="font-medium text-foreground">
-              {formatDate(profile.last_login)}
+              {profile.last_login ? formatDate(profile.last_login) : "—"}
             </span>
           </p>
         </div>

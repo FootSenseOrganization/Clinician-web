@@ -28,9 +28,9 @@ export default function RegisterStatusPage() {
 
           <form
             className="mt-6 flex flex-col gap-3 sm:flex-row"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              setResult(authController.lookupApplicationStatus(query));
+              setResult(await authController.lookupApplicationStatus(query));
             }}
           >
             <input
@@ -52,9 +52,8 @@ export default function RegisterStatusPage() {
                     <Clock className="size-5" /> Pending Review
                   </p>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Application for <strong>{result.application.full_name}</strong> submitted on{" "}
-                    {formatDate(result.application.submitted_at)}. Our verification team is
-                    reviewing your AHPRA registration.
+                    Your application is currently under review.
+                    Our verification team is reviewing your AHPRA registration.
                   </p>
                 </div>
               )}

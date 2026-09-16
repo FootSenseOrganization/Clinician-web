@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { ApplicationCard } from "@/components/ApplicationCard";
@@ -22,17 +23,42 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
 import * as adminController from "@/controllers/adminController";
-import type { Application, ApplicationStatus } from "@/types";
+import type { ApplicationStatus } from "@/types";
 
 export default function AdminApplicationsPage() {
-  const [apps, setApps] = useState<Application[]>(() =>
-    adminController.getApplicationList().map((a) => ({ ...a })),
-  );
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<ApplicationStatus>("pending");
   const [approveId, setApproveId] = useState<string | null>(null);
   const [declineId, setDeclineId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+
+  const { data: apps = [] } = useQuery({
+    queryKey: ["admin", "applications"],
+    queryFn: () => adminController.getApplicationList(),
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (id: string) =>
+      adminController.updateApplicationStatus(id, "approved", user?.id ?? ""),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin"] });
+      toast.success("Application approved.");
+      setApproveId(null);
+    },
+  });
+
+  const declineMutation = useMutation({
+    mutationFn: ({ id, declineReason }: { id: string; declineReason?: string }) =>
+      adminController.updateApplicationStatus(id, "declined", user?.id ?? "", declineReason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin"] });
+      toast("Application declined.");
+      setDeclineId(null);
+    },
+  });
 
   useEffect(() => {
     document.title = "Clinician Applications — FootSense Admin";
@@ -106,11 +132,7 @@ export default function AdminApplicationsPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                setApps((prev) =>
-                  prev.map((a) => (a.id === approveId ? { ...a, status: "approved" } : a)),
-                );
-                toast.success("Application approved.");
-                setApproveId(null);
+                if (approveId) approveMutation.mutate(approveId);
               }}
             >
               Approve
@@ -143,15 +165,7 @@ export default function AdminApplicationsPage() {
             </button>
             <button
               onClick={() => {
-                setApps((prev) =>
-                  prev.map((a) =>
-                    a.id === declineId
-                      ? { ...a, status: "declined", decline_reason: reason || undefined }
-                      : a,
-                  ),
-                );
-                toast("Application declined.");
-                setDeclineId(null);
+                if (declineId) declineMutation.mutate(reason ? { id: declineId, declineReason: reason } : { id: declineId });
               }}
               className="rounded-lg bg-destructive px-4 py-2 text-sm font-semibold text-destructive-foreground transition-transform duration-200 hover:-translate-y-0.5"
             >

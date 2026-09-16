@@ -1,16 +1,19 @@
 import * as alertModel from "@/models/alertModel";
 import type { Alert } from "@/types";
 
-export function getSortedAlerts(): Alert[] {
-  return [...alertModel.findAll()].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-  );
+export async function getSortedAlerts(): Promise<Alert[]> {
+  return alertModel.findAll(); // already sorted DESC by model
 }
 
-export function getUnreadAlerts(): Alert[] {
-  return getSortedAlerts().filter((a) => !a.acknowledged);
+export async function getUnreadAlerts(): Promise<Alert[]> {
+  const all = await alertModel.findAll();
+  return all.filter((a) => !a.acknowledged);
 }
 
-export function getUnreadCount(): number {
-  return alertModel.findAll().filter((a) => !a.acknowledged).length;
+export async function getUnreadCount(): Promise<number> {
+  return alertModel.getUnreadCount();
+}
+
+export async function acknowledgeAlert(alertId: string): Promise<void> {
+  return alertModel.acknowledge(alertId);
 }

@@ -2,10 +2,8 @@ import * as measurementModel from "@/models/measurementModel";
 import { formatDate } from "@/utils/format";
 import type { Measurement } from "@/types";
 
-export function getPatientMeasurements(patientId: string): Measurement[] {
-  return [...measurementModel.findByPatientId(patientId)].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-  );
+export async function getPatientMeasurements(patientId: string): Promise<Measurement[]> {
+  return measurementModel.findByPatientId(patientId);
 }
 
 export function computeChartData(measurements: Measurement[]) {

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ClinicianLayout } from "@/components/layout/ClinicianLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { Avatar, RiskBadge, RiskBar } from "@/components/RiskBadge";
@@ -20,15 +21,19 @@ export default function PatientListPage() {
     document.title = "My Patients — FootSense";
   }, []);
 
-  const patients = patientController.getAllPatients();
-  const rows = useMemo(
-    () => patientController.getPatientList(search, risk, sort),
-    [search, risk, sort],
-  );
+  const { data: allPatients = [] } = useQuery({
+    queryKey: ["patients"],
+    queryFn: () => patientController.getAllPatients(),
+  });
+
+  const { data: rows = [] } = useQuery({
+    queryKey: ["patients", "filtered", search, risk, sort],
+    queryFn: () => patientController.getPatientList(search, risk, sort),
+  });
 
   return (
     <ClinicianLayout>
-      <PageHeader title="My Patients" subtitle={`${patients.length} patients assigned`} />
+      <PageHeader title="My Patients" subtitle={`${allPatients.length} patients assigned`} />
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="relative min-w-64 flex-1">
@@ -88,7 +93,7 @@ export default function PatientListPage() {
                       to={`/patients/${p.id}`}
                       className="flex items-center gap-3"
                     >
-                      <Avatar initials={p.avatar_initials} className="size-9" />
+                      <Avatar initials={p.avatar_initials ?? ""} className="size-9" />
                       <div>
                         <p className="font-semibold text-foreground transition-colors hover:text-primary hover:underline">
                           {p.name}
@@ -97,9 +102,9 @@ export default function PatientListPage() {
                       </div>
                     </Link>
                   </td>
-                  <td className="px-5 py-3 tabular-nums">{p.age}</td>
-                  <td className="px-5 py-3">{p.diabetes_type}</td>
-                  <td className="px-5 py-3 whitespace-nowrap">{formatDate(p.last_measurement)}</td>
+                  <td className="px-5 py-3 tabular-nums">{p.age ?? "—"}</td>
+                  <td className="px-5 py-3">{p.diabetes_type ?? "—"}</td>
+                  <td className="px-5 py-3 whitespace-nowrap">{p.last_measurement ? formatDate(p.last_measurement) : "—"}</td>
                   <td className="px-5 py-3">
                     <RiskBar score={p.latest_risk_score} level={p.latest_risk_level} />
                   </td>

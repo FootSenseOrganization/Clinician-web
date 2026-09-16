@@ -10,10 +10,10 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import * as alertController from "@/controllers/alertController";
 import * as assignmentController from "@/controllers/assignmentController";
-import { mockClinician } from "@/mock/mockData";
 import { cn } from "@/lib/utils";
 
 const baseCls =
@@ -59,16 +59,25 @@ function NavItem({
 }
 
 export function ClinicianLayout({ children }: { children: ReactNode }) {
-  const { role, loading, logout } = useAuth();
+  const { role, user, loading, logout } = useAuth();
   const navigate = useNavigate();
-  const unread = alertController.getUnreadCount();
-  const pendingAssignments = assignmentController.getPendingAssignments().length;
+
+  const { data: unread = 0 } = useQuery({
+    queryKey: ["alerts", "unreadCount"],
+    queryFn: () => alertController.getUnreadCount(),
+    refetchInterval: 30_000,
+  });
+
+  const { data: pendingAssignments = [] } = useQuery({
+    queryKey: ["assignments", "pending"],
+    queryFn: () => assignmentController.getPendingAssignments(),
+  });
 
   useEffect(() => {
     if (!loading && role !== "clinician") navigate("/login");
   }, [loading, role, navigate]);
 
-  if (loading || role !== "clinician") {
+  if (loading || role !== "clinician" || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <p className="text-sm text-muted-foreground">Checking your session…</p>
@@ -90,14 +99,14 @@ export function ClinicianLayout({ children }: { children: ReactNode }) {
 
         <div className="mt-6 flex items-center gap-3 rounded-xl bg-sidebar-accent/60 p-3">
           <span className="inline-flex size-10 items-center justify-center rounded-full brand-gradient text-sm font-semibold text-primary-foreground">
-            {mockClinician.avatar_initials}
+            {user.avatar_initials}
           </span>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-sidebar-accent-foreground">
-              {mockClinician.name}
+              {user.name}
             </p>
             <p className="truncate text-xs text-sidebar-foreground/60">
-              {mockClinician.specialty}
+              {user.specialty}
             </p>
           </div>
         </div>
@@ -106,7 +115,7 @@ export function ClinicianLayout({ children }: { children: ReactNode }) {
           <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" end />
           <NavItem to="/patients" icon={Users} label="Patients" />
           <NavItem to="/alerts" icon={Bell} label="Alerts" badge={unread} badgeTone="danger" />
-          <NavItem to="/assignments" icon={Inbox} label="Assignment Requests" badge={pendingAssignments} />
+          <NavItem to="/assignments" icon={Inbox} label="Assignment Requests" badge={pendingAssignments.length} />
           <NavItem to="/profile" icon={User} label="Profile" />
         </nav>
 

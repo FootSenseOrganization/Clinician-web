@@ -1,10 +1,31 @@
-import { mockPatients } from "@/mock/mockData";
+import { supabase } from "@/lib/supabaseClient";
 import type { Patient } from "@/types";
 
-export function findAll(): Patient[] {
-  return mockPatients;
+export async function findAll(): Promise<Patient[]> {
+  const { data, error } = await supabase
+    .from("patient_summary")
+    .select("*")
+    .order("name");
+  if (error) throw error;
+  return data ?? [];
 }
 
-export function findById(id: string): Patient | undefined {
-  return mockPatients.find((p) => p.id === id);
+export async function findById(id: string): Promise<Patient | null> {
+  const { data, error } = await supabase
+    .from("patient_summary")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function findByClinicianId(clinicianId: string): Promise<Patient[]> {
+  const { data, error } = await supabase
+    .from("patient_summary")
+    .select("*")
+    .eq("clinician_id", clinicianId)
+    .order("name");
+  if (error) throw error;
+  return data ?? [];
 }

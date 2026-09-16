@@ -1,18 +1,36 @@
 import { Link, useNavigate } from "react-router-dom";
 import { ClipboardList, ShieldCheck, UserCheck, UserX, Users } from "lucide-react";
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { StatCard } from "@/components/StatCard";
 import { formatDate } from "@/utils/format";
 import * as adminController from "@/controllers/adminController";
 
 export default function AdminDashboardPage() {
-  const { stats, recentApplications } = adminController.getAdminDashboardData();
   const navigate = useNavigate();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin", "dashboard"],
+    queryFn: () => adminController.getAdminDashboardData(),
+  });
+
+  const stats = data?.stats ?? { pendingApplications: 0, activeClinicians: 0, suspendedClinicians: 0, totalPatients: 0 };
+  const recentApplications = data?.recentApplications ?? [];
 
   useEffect(() => {
     document.title = "Admin Dashboard — FootSense";
   }, []);
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center py-20">
+          <div className="size-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>

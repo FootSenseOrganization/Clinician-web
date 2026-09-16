@@ -1,20 +1,34 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Lock, ShieldCheck } from "lucide-react";
+import { Mail, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 
 export default function AdminLoginPage() {
-  const { loginAsAdmin } = useAuth();
+  const { loginWithEmail } = useAuth();
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     document.title = "Admin Sign In — FootSense";
   }, []);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSubmitting(true);
+    const result = await loginWithEmail(email);
+    setSubmitting(false);
+    if (result.success) {
+      navigate("/admin/dashboard");
+    } else {
+      setError(result.error ?? "Login failed.");
+    }
+  };
+
   const inputCls =
-    "mt-1.5 w-full rounded-lg border border-white/10 bg-white/5 px-3.5 py-2.5 text-sm text-sidebar-accent-foreground outline-none transition-all duration-200 placeholder:text-sidebar-foreground/40 focus:border-primary focus:ring-2 focus:ring-primary/30";
+    "mt-1.5 w-full rounded-lg border border-white/10 bg-white/5 pl-10 pr-3.5 py-2.5 text-sm text-sidebar-accent-foreground outline-none transition-all duration-200 placeholder:text-sidebar-foreground/40 focus:border-primary focus:ring-2 focus:ring-primary/30";
 
   return (
     <div className="sidebar-gradient flex min-h-screen items-center justify-center px-4">
@@ -29,35 +43,34 @@ export default function AdminLoginPage() {
           Restricted access — authorised personnel only.
         </p>
 
-        <form
-          className="mt-8 space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            loginAsAdmin();
-            navigate("/admin/dashboard");
-          }}
-        >
+        <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
           <div>
-            <label className="text-sm font-medium text-sidebar-foreground/80">Username</label>
-            <input
-              className={inputCls}
-              placeholder="administrator"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
+            <label className="text-sm font-medium text-sidebar-foreground/80">Email</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-sidebar-foreground/40" />
+              <input
+                type="email"
+                className={inputCls}
+                placeholder="foot.sense.monash@gmail.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
           </div>
-          <div>
-            <label className="text-sm font-medium text-sidebar-foreground/80">Password</label>
-            <input
-              type="password"
-              className={inputCls}
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-transform duration-200 hover:-translate-y-0.5">
-            <Lock className="size-4" /> Sign In
+
+          {error && (
+            <p className="rounded-lg bg-risk-high/20 px-3 py-2 text-xs font-medium text-risk-high">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-transform duration-200 hover:-translate-y-0.5 disabled:opacity-60 disabled:translate-y-0"
+          >
+            {submitting ? "Signing in…" : "Sign In"}
           </button>
         </form>
 
