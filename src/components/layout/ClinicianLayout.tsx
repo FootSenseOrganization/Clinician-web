@@ -9,11 +9,12 @@ import {
   Users,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import * as alertController from "@/controllers/alertController";
 import * as assignmentController from "@/controllers/assignmentController";
+import { SignOutConfirmDialog } from "@/components/auth/SignOutConfirmDialog";
 import { cn } from "@/lib/utils";
 
 const baseCls =
@@ -61,6 +62,12 @@ function NavItem({
 export function ClinicianLayout({ children }: { children: ReactNode }) {
   const { role, user, loading, logout } = useAuth();
   const navigate = useNavigate();
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+
+  const handleSignOut = async () => {
+    await logout();
+    navigate("/login", { replace: true });
+  };
 
   const { data: unread = 0 } = useQuery({
     queryKey: ["alerts", "unreadCount", user?.id],
@@ -118,10 +125,7 @@ export function ClinicianLayout({ children }: { children: ReactNode }) {
         </nav>
 
         <button
-          onClick={async () => {
-            await logout();
-            navigate("/login", { replace: true });
-          }}
+          onClick={() => setShowSignOutDialog(true)}
           className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/75 transition-colors duration-200 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
         >
           <LogOut className="size-4.5" />
@@ -134,28 +138,46 @@ export function ClinicianLayout({ children }: { children: ReactNode }) {
           <Link to="/dashboard" className="text-base font-bold text-sidebar-accent-foreground">
             FootSense
           </Link>
-          <nav className="flex items-center gap-1 overflow-x-auto text-xs">
-            <Link to="/dashboard" className="rounded-md px-2 py-1 text-sidebar-foreground/80">
-              Home
-            </Link>
-            <Link to="/patients" className="rounded-md px-2 py-1 text-sidebar-foreground/80">
-              Patients
-            </Link>
-            <Link to="/alerts" className="rounded-md px-2 py-1 text-sidebar-foreground/80">
-              Alerts
-            </Link>
-            <Link to="/assignments" className="rounded-md px-2 py-1 text-sidebar-foreground/80">
-              Requests
-            </Link>
-            <Link to="/profile" className="rounded-md px-2 py-1 text-sidebar-foreground/80">
-              Profile
-            </Link>
-          </nav>
+          <div className="flex items-center gap-1">
+            <nav className="flex items-center gap-1 overflow-x-auto text-xs">
+              <Link to="/dashboard" className="rounded-md px-2 py-1 text-sidebar-foreground/80 hover:text-sidebar-accent-foreground">
+                Home
+              </Link>
+              <Link to="/patients" className="rounded-md px-2 py-1 text-sidebar-foreground/80 hover:text-sidebar-accent-foreground">
+                Patients
+              </Link>
+              <Link to="/alerts" className="rounded-md px-2 py-1 text-sidebar-foreground/80 hover:text-sidebar-accent-foreground">
+                Alerts
+              </Link>
+              <Link to="/assignments" className="rounded-md px-2 py-1 text-sidebar-foreground/80 hover:text-sidebar-accent-foreground">
+                Requests
+              </Link>
+              <Link to="/profile" className="rounded-md px-2 py-1 text-sidebar-foreground/80 hover:text-sidebar-accent-foreground">
+                Profile
+              </Link>
+            </nav>
+            <button
+              onClick={() => setShowSignOutDialog(true)}
+              aria-label="Sign Out"
+              title="Sign Out"
+              className="inline-flex items-center justify-center rounded-md p-1.5 text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
+            >
+              <LogOut className="size-4" />
+            </button>
+          </div>
         </header>
         <main className="flex-1 p-4 md:p-8">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
       </div>
+
+      <SignOutConfirmDialog
+        open={showSignOutDialog}
+        onOpenChange={setShowSignOutDialog}
+        onConfirm={handleSignOut}
+        title="Are you sure you want to sign out?"
+        description="You will be signed out of your clinician account. Telemetry data and pending assignments will remain securely saved."
+      />
     </div>
   );
 }
