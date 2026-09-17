@@ -1,11 +1,4 @@
-# FootSense — Intelligent Diabetic Foot Monitoring Platform
-
-[![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=white)](https://reactjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Vite](https://img.shields.io/badge/Vite-8.1-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
-[![TanStack Query](https://img.shields.io/badge/TanStack_Query-v5-FF4154?logo=react-query&logoColor=white)](https://tanstack.com/query)
+# FootSense - Intelligent Diabetic Foot Monitoring Platform
 
 FootSense is a clinical-grade diabetic foot monitoring and telehealth platform. It continuously captures, calibrates, and evaluates bilateral plantar thermal telemetry from IoT sensor insoles to detect pre-ulcerative thermal hotspots before skin breakdown occurs.
 
@@ -14,7 +7,7 @@ FootSense is a clinical-grade diabetic foot monitoring and telehealth platform. 
 ## Table of Contents
 1. [Clinical Background & Objective](#1-clinical-background--objective)
 2. [Key Platform Features](#2-key-platform-features)
-3. [System Architecture](#3-system-architecture)
+3. [System & MCS Architecture](#3-system--mcs-architecture)
 4. [Database Schema & ER Diagram](#4-database-schema--er-diagram)
 5. [Database Views & Stored Procedures (RPCs)](#5-database-views--stored-procedures-rpcs)
 6. [Security & Account Suspension Model](#6-security--account-suspension-model)
@@ -22,6 +15,7 @@ FootSense is a clinical-grade diabetic foot monitoring and telehealth platform. 
 8. [Getting Started & Local Development](#8-getting-started--local-development)
 9. [Environment Variables](#9-environment-variables)
 10. [Repository Structure](#10-repository-structure)
+11. [Clinical & Security Disclaimers](#11-clinical--security-disclaimers)
 
 ---
 
@@ -30,14 +24,14 @@ FootSense is a clinical-grade diabetic foot monitoring and telehealth platform. 
 Diabetic Foot Ulcers (DFUs) are among the most severe complications of diabetes mellitus, frequently preceding lower-extremity amputations. Peripheral neuropathy deprives patients of protective pain sensation, allowing tissue inflammation to progress unnoticed.
 
 * **Pathophysiological Marker:** Localized sub-surface inflammation produces elevated cutaneous temperature (thermal hotspots).
-* **Clinical Threshold:** A persistent bilateral temperature asymmetry $\Delta T \ge 2.2^\circ\text{C}$ between identical anatomical zones of contralateral feet indicates impending ulceration.
-* **FootSense Strategy:** By pairing daily sensor measurements (calibrated across a 20×8 grid and 9 anatomical zones) with automated telemetry analytics, FootSense alerts clinicians to microvascular inflammation days before visual ulceration manifests.
+* **Clinical Threshold:** A persistent bilateral temperature asymmetry delta T >= 2.2 deg C between identical anatomical zones of contralateral feet indicates impending ulceration.
+* **FootSense Strategy:** By pairing daily sensor measurements (calibrated across a 20x8 grid and 9 anatomical zones) with automated telemetry analytics, FootSense alerts clinicians to microvascular inflammation days before visual ulceration manifests.
 
 ---
 
 ## 2. Key Platform Features
 
-### 🩺 Clinician Portal (`/dashboard`)
+### Clinician Portal (`/dashboard`)
 * **Clinical Overview:** High-level statistics on assigned patient cohort, total alerts, and severe thermal asymmetries.
 * **Patient Roster & Monitoring:** Patient registry with risk badges (Low, Moderate, High), diabetes history, and last scan timestamps.
 * **Thermal Analysis & Heatmaps:**
@@ -52,25 +46,25 @@ Diabetic Foot Ulcers (DFUs) are among the most severe complications of diabetes 
 * **Clinical Notes & Care Directives:** Persistent remarks and treatment instructions with urgency flags (routine, important, urgent).
 * **Doctor-Patient Assignment Management:** Review and accept incoming patient assignment requests.
 
-### 🛡️ Administrator Portal (`/admin/*`)
+### Administrator Portal (`/admin/*`)
 * **Admin Dashboard:** Platform-wide metrics (Active Clinicians, Suspended Clinicians, Pending Applications, Total Patients).
 * **Clinician Management:**
   * **Account Status Switch:** Instant toggling of clinician accounts between **Active** and **Suspended** state with real-time UI synchronization and database persistence.
   * **Role Management:** Standardized actions to promote clinicians to Administrator or demote administrators back to Clinician.
 * **Clinician Onboarding Review:** Verification of applicant credentials, AHPRA numbers, and institutional affiliations with one-click approval (triggering automated user provisioning) or decline with custom clinical notes.
 
-### 🔄 Multi-Role Architecture
+### Multi-Role Architecture
 * **Dual-Role Support:** Clinicians who are elevated to Administrator maintain their complete clinical profile, patient assignments, and historical records.
 * **Instant Role Switcher:** Switch between the Clinician portal and Admin portal seamlessly from the navigation header without signing out.
 * **Root Administrator Protection:** Root admin `foot.sense.monash@gmail.com` holds exclusive authority to demote administrators, while other administrators can promote clinicians.
 
-### 🌐 Public Services
+### Public Services
 * **Application Tracker (`/status`):** Secure, publicly accessible status checker for clinician applicants by email or AHPRA number.
 * **Clinician Registration (`/register`):** Streamlined registration flow with institutional and AHPRA credential submissions.
 
 ---
 
-## 3. System Architecture
+## 3. System & MCS Architecture
 
 ```mermaid
 flowchart TD
@@ -107,6 +101,51 @@ flowchart TD
     AdminUI --> CliniciansTable
     MeasurementsTable --> HeatmapStorage
 ```
+
+### Model-Controller-Service (MCS) Architecture
+
+The frontend application strictly organizes its business and data access logic using the **Model-Controller-Service (MCS)** design pattern:
+
+```text
+React Components & Pages (UI Layer)
+            |
+            v
+    Controllers (src/controllers/)
+            |
+            v
+     Services (src/services/)
+            |
+            v
+      Models (src/models/)
+            |
+            v
+  Data Layer (Supabase / Future Backend API)
+```
+
+1. **Model Layer (`src/models/`)**:
+   * Pure data-access layer. Responsible for communicating with data sources, executing database queries, column mapping, and payload transformation.
+   * Unpacks raw JSONB structures (e.g., in `measurementModel.ts`, mapping 20x8 sensor thermal arrays and GCS image URLs into strongly-typed domain interfaces).
+   * Models contain no presentation logic and no user-facing error formatting.
+
+2. **Service Layer (`src/services/`)**:
+   * Encapsulates all domain-specific clinical calculations and business rules.
+   * Performs temperature asymmetry threshold checks, risk level distributions (Low, Moderate, High), alert severity classification, and multi-model query coordination.
+   * Keeps business rules entirely independent of both the data transport mechanism and UI component lifecycles.
+
+3. **Controller Layer (`src/controllers/`)**:
+   * Serves as the intermediary between the presentation tier (React pages and TanStack Query hooks) and underlying services.
+   * Handles parameter validation, input normalization, optimistic cache coordination, and user-facing error formatting.
+
+#### Why the MCS Architecture? Future-Proof Backend Integration
+
+The core architectural motivation for structuring the web application with an MCS pattern is **effortless future migration to a dedicated backend**:
+
+* **Eliminating Direct Database Coupling from the UI**: In conventional client-centric React applications, components often execute queries directly using a client SDK (e.g. `supabase.from('patients').select(...)`). While fast to prototype, this tightly couples the entire UI tree to a specific database client SDK. Migrating to an independent backend API later would require editing dozens of React components.
+* **Plug-and-Play Backend Migration**: With the MCS architecture, UI components and React Query hooks interact strictly with controller methods (e.g. `patientController.getPatientDetails()`, `alertController.acknowledgeAlert()`).
+  * When a dedicated backend API (such as FastAPI, Express/NestJS, Go, or microservices) is introduced in the future, **the UI components, pages, and React Query caching hooks do not need to change at all**.
+  * Only the `models` (or `services`) need to be updated to target the new REST or gRPC endpoints (via standard `fetch` or `axios`) instead of calling the Supabase SDK directly.
+* **Centralized Security and Transport Abstraction**: Switching authentication token headers, introducing an API gateway, or altering payload compression protocols can be performed inside a single client configuration rather than across multiple UI components.
+* **Isolated Testing**: Clinical risk algorithms in the service layer and data mappers in the model layer can be unit-tested without requiring a live database connection or rendering React DOM nodes.
 
 ---
 
@@ -331,12 +370,12 @@ All migrations are located in `supabase/migrations/`:
 
 | Migration | Focus Area |
 |---|---|
-| `001`–`012` | Initial schema setup (admins, clinicians, patients, measurements, alerts, applications, remarks, instructions). |
+| `001-012` | Initial schema setup (admins, clinicians, patients, measurements, alerts, applications, remarks, instructions). |
 | `013`, `017` | Storage bucket configuration (`footsense-heatmaps`). |
 | `014`, `029` | Seed data and mock patient clinical datasets. |
 | `015`, `030` | Central `users_profile` table and NOT NULL constraints. |
 | `016`, `032` | Thermal measurement JSONB schema and TMP117 session telemetry columns. |
-| `018`–`028` | Schema normalization (V2 schemas, improved foreign keys, and indexes). |
+| `018-028` | Schema normalization (V2 schemas, improved foreign keys, and indexes). |
 | `031`, `040` | Robust fail-safe user provisioning triggers for Google OAuth identity synchronization. |
 | `033` | Translation helper `get_auth_profile_id` and Row-Level Security update across all tables. |
 | `034`, `037` | Automated clinician onboarding triggers on application approval and `lookup_application_status` RPC. |
@@ -415,44 +454,44 @@ Generates an optimized static bundle in the `dist/` directory.
 
 ```text
 webapp_new/
-├── public/                     # Static assets (FootSense SVG, ICO, and PNG favicons)
-│   ├── favicon.svg             # Crisp vector brand icon
-│   ├── favicon.ico             # Multi-resolution legacy icon
-│   └── favicon.png             # High-DPI app icon
-├── src/
-│   ├── components/             # Reusable UI & Layout Components
-│   │   ├── auth/               # ProtectedRoute, SignOutConfirmDialog
-│   │   ├── layout/             # ClinicianLayout, AdminLayout, NavItems
-│   │   ├── ui/                 # Shadcn UI primitives (Button, Switch, Dialog, etc.)
-│   │   ├── ThermalFoot.tsx     # Plantar heatmap viewer with 9-point overlay
-│   │   └── RiskBadge.tsx       # Standardized Low/Moderate/High risk indicators
-│   ├── config/                 # Application routing constants
-│   ├── context/
-│   │   └── AuthContext.tsx     # Supabase session manager & role resolution
-│   ├── controllers/            # Controller layer orchestrating services and views
-│   ├── models/                 # Data access layer (Supabase table mappers)
-│   ├── pages/                  # Top-level Page Views
-│   │   ├── LandingPage.tsx     # Public promotional landing page
-│   │   ├── LoginPage.tsx       # Unified Google OAuth sign-in
-│   │   ├── RegisterPage.tsx    # Clinician onboarding application form
-│   │   ├── RegisterStatusPage.tsx # Public application status tracking
-│   │   ├── ClinicianDashboardPage.tsx # Clinician main dashboard
-│   │   ├── PatientListPage.tsx # Patient registry table
-│   │   ├── PatientDetailPage.tsx # In-depth thermal scans, notes, and charts
-│   │   ├── AlertsCentrePage.tsx # Real-time clinical alerts
-│   │   ├── AdminDashboardPage.tsx # Admin platform metrics
-│   │   ├── AdminCliniciansPage.tsx # Clinician management & status toggle
-│   │   └── AdminApplicationsPage.tsx # Onboarding approval queue
-│   ├── services/               # Business logic and Supabase RPC integrations
-│   ├── types/                  # TypeScript interfaces and domain models
-│   ├── utils/                  # Date formatting, clinical risk calculations
-│   ├── App.tsx                 # Main route configuration
-│   └── main.tsx                # React DOM entry point with QueryClientProvider
-├── supabase/
-│   └── migrations/             # Full SQL migrations 001 through 042
-├── index.html                  # HTML entry point with FootSense branding
-├── vite.config.ts              # Vite configuration
-└── package.json                # Project dependencies and build scripts
+|-- public/                     # Static assets (FootSense SVG, ICO, and PNG favicons)
+|   |-- favicon.svg             # Crisp vector brand icon
+|   |-- favicon.ico             # Multi-resolution legacy icon
+|   `-- favicon.png             # High-DPI app icon
+|-- src/
+|   |-- components/             # Reusable UI & Layout Components
+|   |   |-- auth/               # ProtectedRoute, SignOutConfirmDialog
+|   |   |-- layout/             # ClinicianLayout, AdminLayout, NavItems
+|   |   |-- ui/                 # Shadcn UI primitives (Button, Switch, Dialog, etc.)
+|   |   |-- ThermalFoot.tsx     # Plantar heatmap viewer with 9-point overlay
+|   |   `-- RiskBadge.tsx       # Standardized Low/Moderate/High risk indicators
+|   |-- config/                 # Application routing constants
+|   |-- context/
+|   |   `-- AuthContext.tsx     # Supabase session manager & role resolution
+|   |-- controllers/            # Controller layer orchestrating services and views
+|   |-- models/                 # Data access layer (Supabase table mappers)
+|   |-- pages/                  # Top-level Page Views
+|   |   |-- LandingPage.tsx     # Public promotional landing page
+|   |   |-- LoginPage.tsx       # Unified Google OAuth sign-in
+|   |   |-- RegisterPage.tsx    # Clinician onboarding application form
+|   |   |-- RegisterStatusPage.tsx # Public application status tracking
+|   |   |-- ClinicianDashboardPage.tsx # Clinician main dashboard
+|   |   |-- PatientListPage.tsx # Patient registry table
+|   |   |-- PatientDetailPage.tsx # In-depth thermal scans, notes, and charts
+|   |   |-- AlertsCentrePage.tsx # Real-time clinical alerts
+|   |   |-- AdminDashboardPage.tsx # Admin platform metrics
+|   |   |-- AdminCliniciansPage.tsx # Clinician management & status toggle
+|   |   `-- AdminApplicationsPage.tsx # Onboarding approval queue
+|   |-- services/               # Business logic and Supabase RPC integrations
+|   |-- types/                  # TypeScript interfaces and domain models
+|   |-- utils/                  # Date formatting, clinical risk calculations
+|   |-- App.tsx                 # Main route configuration
+|   `-- main.tsx                # React DOM entry point with QueryClientProvider
+|-- supabase/
+|   `-- migrations/             # Full SQL migrations 001 through 042
+|-- index.html                  # HTML entry point with FootSense branding
+|-- vite.config.ts              # Vite configuration
+`-- package.json                # Project dependencies and build scripts
 ```
 
 ---
