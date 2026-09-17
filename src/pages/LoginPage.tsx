@@ -4,13 +4,32 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
-  const { signInWithGoogle, role, loading, isAuthenticated, authEmail } = useAuth();
+  const { signInWithGoogle, role, loading, isAuthenticated, authEmail, authError, clearAuthError } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     document.title = "Sign In — FootSense";
+
+    // Read error from URL parameters if redirected back with error
+    const hash = window.location.hash;
+    const search = window.location.search;
+    const params = new URLSearchParams(search || (hash.startsWith("#") ? hash.substring(1) : hash));
+    const errorDesc = params.get("error_description") || params.get("error");
+    if (errorDesc) {
+      const decoded = errorDesc.replace(/\+/g, " ").trim();
+      if (
+        decoded.toLowerCase().includes("database error") ||
+        decoded.toLowerCase().includes("saving new user") ||
+        decoded.toLowerCase().includes("server_error") ||
+        decoded.toLowerCase().includes("unexpected_failure")
+      ) {
+        setError("Please use a registered email address to sign in, or apply for clinician access.");
+      } else {
+        setError(decoded);
+      }
+    }
   }, []);
 
   // After Google auth resolves, redirect based on role
@@ -20,16 +39,18 @@ export default function LoginPage() {
       navigate("/dashboard", { replace: true });
     } else if (role === "admin") {
       navigate("/admin/dashboard", { replace: true });
-    } else if (isAuthenticated && !role) {
+    } else if (isAuthenticated && (!role || (role !== "clinician" && role !== "admin"))) {
       // Authenticated via Google but no clinician/admin role in the system
       setError(
-        `No clinician or administrator account found for ${authEmail}. Please apply for access or contact your administrator.`,
+        authError ||
+          `Please use a registered email address to sign in, or apply for clinician access.`,
       );
     }
-  }, [loading, role, isAuthenticated, authEmail, navigate]);
+  }, [loading, role, isAuthenticated, authEmail, authError, navigate]);
 
   const handleGoogleSignIn = async () => {
     setError("");
+    clearAuthError();
     setSubmitting(true);
     try {
       await signInWithGoogle("/login");
@@ -39,6 +60,8 @@ export default function LoginPage() {
       setSubmitting(false);
     }
   };
+
+  const activeError = error || authError;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center hero-gradient px-4 py-12">
@@ -60,10 +83,12 @@ export default function LoginPage() {
           <p className="mt-1 text-sm text-muted-foreground">Portal sign in</p>
 
           <div className="mt-8 space-y-4">
-            {error && (
-              <p className="rounded-lg bg-risk-high-soft px-3 py-2 text-xs font-medium text-risk-high">
-                {error}
-              </p>
+            {activeError && (
+              <div className="rounded-xl border border-risk-high/30 bg-risk-high-soft p-3.5 text-left">
+                <p className="text-xs font-semibold text-risk-high leading-relaxed">
+                  {activeError}
+                </p>
+              </div>
             )}
 
             <button

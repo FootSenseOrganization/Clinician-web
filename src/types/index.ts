@@ -15,6 +15,9 @@ export interface Clinician {
   last_login: string;
   created_at: string;
   patient_count: number;
+  is_admin?: boolean;
+  is_clinician?: boolean;
+  roles?: ("admin" | "clinician")[];
 }
 
 export interface Patient {
@@ -139,6 +142,7 @@ export interface RegisteredClinician {
   status: "active" | "suspended";
   patient_count: number;
   last_login: string;
+  is_admin?: boolean;
 }
 
 // ─── Assignments ──────────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -8,7 +8,6 @@ import LandingPage from "@/pages/LandingPage";
 import LoginPage from "@/pages/LoginPage";
 import RegisterPage from "@/pages/RegisterPage";
 import RegisterStatusPage from "@/pages/RegisterStatusPage";
-import AdminLoginPage from "@/pages/AdminLoginPage";
 import AdminDashboardPage from "@/pages/AdminDashboardPage";
 import AdminApplicationsPage from "@/pages/AdminApplicationsPage";
 import AdminCliniciansPage from "@/pages/AdminCliniciansPage";
@@ -42,7 +41,7 @@ export default function App() {
           path="/admin"
           element={
             <PublicOnlyRoute>
-              <AdminLoginPage />
+              <Navigate to="/login" replace />
             </PublicOnlyRoute>
           }
         />

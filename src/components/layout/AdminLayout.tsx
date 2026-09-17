@@ -1,5 +1,13 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { ClipboardList, LayoutDashboard, LogOut, ShieldCheck, Users } from "lucide-react";
+import {
+  Activity,
+  ArrowRightLeft,
+  ClipboardList,
+  LayoutDashboard,
+  LogOut,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -42,7 +50,7 @@ function NavItem({
 }
 
 export function AdminLayout({ children }: { children: ReactNode }) {
-  const { role, loading, logout } = useAuth();
+  const { role, loading, logout, isClinician, switchRole } = useAuth();
   const navigate = useNavigate();
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
@@ -78,6 +86,23 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           </span>
         </Link>
 
+        {isClinician && (
+          <button
+            onClick={() => {
+              switchRole("clinician");
+              navigate("/dashboard");
+            }}
+            className="mt-4 flex w-full items-center justify-between rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition-all duration-200 hover:bg-primary/20 hover:shadow-card"
+            title="Switch to Clinician Portal"
+          >
+            <span className="flex items-center gap-2">
+              <Activity className="size-4" />
+              Switch to Clinician
+            </span>
+            <ArrowRightLeft className="size-3.5 opacity-75" />
+          </button>
+        )}
+
         <nav className="mt-8 flex flex-1 flex-col gap-1">
           <NavItem to="/admin/dashboard" icon={LayoutDashboard} label="Dashboard" />
           <NavItem
@@ -104,6 +129,19 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             FootSense Admin
           </span>
           <div className="flex items-center gap-1">
+            {isClinician && (
+              <button
+                onClick={() => {
+                  switchRole("clinician");
+                  navigate("/dashboard");
+                }}
+                className="mr-1 inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/15 px-2 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/25"
+                title="Switch to Clinician Portal"
+              >
+                <Activity className="size-3.5" />
+                Clinician
+              </button>
+            )}
             <nav className="flex items-center gap-1 text-xs">
               <Link to="/admin/dashboard" className="rounded-md px-2 py-1 text-sidebar-foreground/80 hover:text-sidebar-accent-foreground">
                 Home

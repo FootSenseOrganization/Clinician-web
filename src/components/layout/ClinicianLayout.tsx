@@ -1,10 +1,12 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   Activity,
+  ArrowRightLeft,
   Bell,
   Inbox,
   LayoutDashboard,
   LogOut,
+  ShieldCheck,
   User,
   Users,
 } from "lucide-react";
@@ -60,7 +62,7 @@ function NavItem({
 }
 
 export function ClinicianLayout({ children }: { children: ReactNode }) {
-  const { role, user, loading, logout } = useAuth();
+  const { role, user, loading, logout, isAdmin, switchRole } = useAuth();
   const navigate = useNavigate();
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
@@ -116,6 +118,23 @@ export function ClinicianLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
 
+        {isAdmin && (
+          <button
+            onClick={() => {
+              switchRole("admin");
+              navigate("/admin/dashboard");
+            }}
+            className="mt-3 flex w-full items-center justify-between rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition-all duration-200 hover:bg-primary/20 hover:shadow-card"
+            title="Switch to Admin Portal"
+          >
+            <span className="flex items-center gap-2">
+              <ShieldCheck className="size-4" />
+              Switch to Admin Portal
+            </span>
+            <ArrowRightLeft className="size-3.5 opacity-75" />
+          </button>
+        )}
+
         <nav className="mt-6 flex flex-1 flex-col gap-1">
           <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" end />
           <NavItem to="/patients" icon={Users} label="Patients" />
@@ -139,6 +158,19 @@ export function ClinicianLayout({ children }: { children: ReactNode }) {
             FootSense
           </Link>
           <div className="flex items-center gap-1">
+            {isAdmin && (
+              <button
+                onClick={() => {
+                  switchRole("admin");
+                  navigate("/admin/dashboard");
+                }}
+                className="mr-1 inline-flex items-center gap-1 rounded-lg border border-primary/40 bg-primary/15 px-2 py-1 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/25"
+                title="Switch to Admin Portal"
+              >
+                <ShieldCheck className="size-3.5" />
+                Admin
+              </button>
+            )}
             <nav className="flex items-center gap-1 overflow-x-auto text-xs">
               <Link to="/dashboard" className="rounded-md px-2 py-1 text-sidebar-foreground/80 hover:text-sidebar-accent-foreground">
                 Home

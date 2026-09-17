@@ -26,3 +26,21 @@ export async function updateApplicationStatus(
 ): Promise<void> {
   return applicationModel.updateStatus(id, status, reviewedBy, declineReason);
 }
+
+export async function promoteClinicianToAdmin(userId: string): Promise<void> {
+  return adminService.promoteClinicianToAdmin(userId);
+}
+
+export async function demoteAdminToClinician(userId: string): Promise<void> {
+  return adminService.demoteAdminToClinician(userId);
+}
+
+export async function updateClinicianStatus(
+  userId: string,
+  status: "active" | "suspended",
+): Promise<void> {
+  return adminService.updateClinicianStatus(userId, status);
+}
+
+
+

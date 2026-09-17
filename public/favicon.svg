@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284C7" />
+      <stop offset="100%" stop-color="#06B6D4" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.15" />
+    </filter>
+  </defs>
+
+  <!-- Squircle Brand Background -->
+  <rect width="128" height="128" rx="30" fill="url(#bgGrad)" />
+  <rect x="4" y="4" width="120" height="120" rx="26" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-opacity="0.25" />
+
+  <!-- Footprint Silhouette in Soft Translucent White -->
+  <g fill="#FFFFFF" fill-opacity="0.28">
+    <!-- Big Toe -->
+    <ellipse cx="48" cy="38" rx="7" ry="9" transform="rotate(-5 48 38)" />
+    <!-- Other Toes -->
+    <circle cx="62" cy="33" r="5" />
+    <circle cx="75" cy="38" r="4.4" />
+    <circle cx="86" cy="46" r="3.8" />
+    <circle cx="93" cy="56" r="3.2" />
+    <!-- Sole & Arch -->
+    <ellipse cx="64" cy="58" rx="24" ry="14" transform="rotate(-5 64 58)" />
+    <ellipse cx="58" cy="94" rx="14" ry="12" />
+    <path d="M46 64 C43 74 46 84 50 90 C56 90 64 86 62 76 C60 68 58 64 46 64 Z" />
+  </g>
+
+  <!-- Vital Activity Telemetry Wave -->
+  <path d="M14 69 L34 69 L43 46 L55 92 L66 31 L80 85 L90 60 L98 69 L114 69" 
+        fill="none" 
+        stroke="#FFFFFF" 
+        stroke-width="7" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"
+        filter="url(#shadow)" />
+
+  <!-- Sensor Node Pulse Point -->
+  <circle cx="66" cy="31" r="5.5" fill="#FFFFFF" />
+  <circle cx="66" cy="31" r="8" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-opacity="0.6" />
+</svg>
